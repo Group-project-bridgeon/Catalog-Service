@@ -80,6 +80,17 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	brandRepository := postgresrepo.NewBrandRepository(
+		queries,
+	)
+
+	brandService := service.NewBrandService(brandRepository)
+
+	brandHandler := handler.NewBrandHandler(
+		brandService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -88,6 +99,10 @@ func Run(log zerolog.Logger) error {
 	router.RegisterCategoryRoutes(
 		httpHandler,
 		categoryHandler,
+	)
+	router.RegisterBrandRoutes(
+		httpHandler,
+		brandHandler,
 	)
 
 	server := &http.Server{

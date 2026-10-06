@@ -2,15 +2,12 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres/catalogdb"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -73,7 +70,7 @@ func (r *CategoryRepository) Create(
 		},
 	)
 	if err != nil {
-		return domain.Category{}, mapCategoryDBError(
+		return domain.Category{}, mapDBError(
 			"create category",
 			err,
 		)
@@ -91,7 +88,7 @@ func (r *CategoryRepository) GetByID(
 		uuidToPG(id),
 	)
 	if err != nil {
-		return domain.Category{}, mapCategoryDBError(
+		return domain.Category{}, mapDBError(
 			"get category by id",
 			err,
 		)
@@ -109,7 +106,7 @@ func (r *CategoryRepository) GetByCode(
 		code,
 	)
 	if err != nil {
-		return domain.Category{}, mapCategoryDBError(
+		return domain.Category{}, mapDBError(
 			"get category by code",
 			err,
 		)
@@ -160,7 +157,7 @@ func (r *CategoryRepository) Update(
 		},
 	)
 	if err != nil {
-		return domain.Category{}, mapCategoryDBError(
+		return domain.Category{}, mapDBError(
 			"update category",
 			err,
 		)
@@ -182,7 +179,7 @@ func (r *CategoryRepository) SetActive(
 		},
 	)
 	if err != nil {
-		return domain.Category{}, mapCategoryDBError(
+		return domain.Category{}, mapDBError(
 			"set category active",
 			err,
 		)
@@ -204,45 +201,4 @@ func categoryToDomain(
 		CreatedAt:   row.CreatedAt.Time,
 		UpdatedAt:   row.UpdatedAt.Time,
 	}
-}
-
-func mapCategoryDBError(
-	operation string,
-	err error,
-) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf(
-			"%s: %w",
-			operation,
-			repository.ErrNotFound,
-		)
-	}
-
-	var pgErr *pgconn.PgError
-
-	if errors.As(err, &pgErr) {
-		switch pgErr.Code {
-		case "23505":
-			return fmt.Errorf(
-				"%s: %w: %w",
-				operation,
-				repository.ErrConflict,
-				err,
-			)
-
-		case "23503":
-			return fmt.Errorf(
-				"%s: %w: %w",
-				operation,
-				repository.ErrInvalidReference,
-				err,
-			)
-		}
-	}
-
-	return fmt.Errorf(
-		"%s: %w",
-		operation,
-		err,
-	)
 }
