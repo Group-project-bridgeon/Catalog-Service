@@ -6,7 +6,7 @@ $code = "BRAND-INT-$unique"
 Write-Host "1. CREATE BRAND"
 
 $createBody = @{
-    name = "Integration Brand"
+    name = "Integration Brand $unique"
     code = $code
 } | ConvertTo-Json
 
@@ -56,7 +56,7 @@ Write-Host "PASS - Brand found in list"
 Write-Host "4. UPDATE BRAND"
 
 $updateBody = @{
-    name = "Updated Integration Brand"
+    name = "Updated Integration Brand $unique"
     code = "$code-UPD"
 } | ConvertTo-Json
 
@@ -66,7 +66,7 @@ $updated = Invoke-RestMethod `
     -ContentType "application/json" `
     -Body $updateBody
 
-if ($updated.name -ne "Updated Integration Brand") {
+if ($updated.name -ne "Updated Integration Brand $unique") {
     throw "Update failed"
 }
 

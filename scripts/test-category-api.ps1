@@ -8,7 +8,7 @@ $code = "CAT-INT-$unique"
 Write-Host "1. CREATE CATEGORY"
 
 $createBody = @{
-    name = "Integration Category"
+    name = "Integration Category $unique"
     code = $code
     description = "Automated integration test"
 } | ConvertTo-Json
@@ -59,7 +59,7 @@ Write-Host "PASS - Category found in list"
 Write-Host "4. UPDATE CATEGORY"
 
 $updateBody = @{
-    name = "Updated Integration Category"
+    name = "Updated Integration Category $unique"
     code = "$code-UPD"
     description = "Updated by integration test"
 } | ConvertTo-Json
@@ -70,7 +70,7 @@ $updated = Invoke-RestMethod `
     -ContentType "application/json" `
     -Body $updateBody
 
-if ($updated.name -ne "Updated Integration Category") {
+if ($updated.name -ne "Updated Integration Category $unique") {
     throw "Update failed"
 }
 

@@ -84,10 +84,25 @@ func Run(log zerolog.Logger) error {
 		queries,
 	)
 
-	brandService := service.NewBrandService(brandRepository)
+	brandService := service.NewBrandService(
+		brandRepository,
+	)
 
 	brandHandler := handler.NewBrandHandler(
 		brandService,
+		log,
+	)
+
+	unitRepository := postgresrepo.NewUnitRepository(
+		queries,
+	)
+
+	unitService := service.NewUnitService(
+		unitRepository,
+	)
+
+	unitHandler := handler.NewUnitHandler(
+		unitService,
 		log,
 	)
 
@@ -100,9 +115,15 @@ func Run(log zerolog.Logger) error {
 		httpHandler,
 		categoryHandler,
 	)
+
 	router.RegisterBrandRoutes(
 		httpHandler,
 		brandHandler,
+	)
+
+	router.RegisterUnitRoutes(
+		httpHandler,
+		unitHandler,
 	)
 
 	server := &http.Server{
