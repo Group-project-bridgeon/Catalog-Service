@@ -106,6 +106,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	productRepository := postgresrepo.NewProductRepository(
+		queries,
+	)
+
+	productService := service.NewProductService(
+		productRepository,
+	)
+
+	productHandler := handler.NewProductHandler(
+		productService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -124,6 +137,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterUnitRoutes(
 		httpHandler,
 		unitHandler,
+	)
+
+	router.RegisterProductRoutes(
+		httpHandler,
+		productHandler,
 	)
 
 	server := &http.Server{
