@@ -27,7 +27,7 @@ func RegisterVariantValueRoutes(
 	)
 
 	r.GET(
-		"/api/v1/catalog/product-variants/:variant_id/values",
+		"/api/v1/catalog/product-variants/:id/values",
 		h.ListByVariantID,
 	)
 }

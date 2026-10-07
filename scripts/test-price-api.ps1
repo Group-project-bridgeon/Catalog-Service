@@ -1,3 +1,6 @@
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $categoryBaseUrl = "http://localhost:8081/api/v1/catalog/categories"
 $productBaseUrl = "http://localhost:8081/api/v1/catalog/products"
 $unitBaseUrl = "http://localhost:8081/api/v1/catalog/units"

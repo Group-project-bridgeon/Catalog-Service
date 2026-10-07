@@ -119,6 +119,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	productVariantRepository := postgresrepo.NewProductVariantRepository(
+		queries,
+	)
+
+	productVariantService := service.NewProductVariantService(
+		productVariantRepository,
+	)
+
+	productVariantHandler := handler.NewProductVariantHandler(
+		productVariantService,
+		log,
+	)
+
 	attributeRepository := postgresrepo.NewAttributeRepository(
 		queries,
 	)
@@ -220,6 +233,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterProductRoutes(
 		httpHandler,
 		productHandler,
+	)
+
+	router.RegisterProductVariantRoutes(
+		httpHandler,
+		productVariantHandler,
 	)
 
 	router.RegisterAttributeRoutes(

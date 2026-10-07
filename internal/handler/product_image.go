@@ -177,7 +177,7 @@ func (h *ProductImageHandler) ListByProductID(
 	c *gin.Context,
 ) {
 	productID, err := uuid.Parse(
-		c.Param("product_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(
@@ -211,7 +211,7 @@ func (h *ProductImageHandler) ListByVariantID(
 	c *gin.Context,
 ) {
 	variantID, err := uuid.Parse(
-		c.Param("variant_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(

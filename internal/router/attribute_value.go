@@ -19,7 +19,7 @@ func RegisterAttributeValueRoutes(
 	values.PUT("/:id", h.Update)
 
 	r.GET(
-		"/api/v1/catalog/attributes/:attribute_id/values",
+		"/api/v1/catalog/attributes/:id/values",
 		h.ListByAttributeID,
 	)
 }

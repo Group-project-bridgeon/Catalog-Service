@@ -162,7 +162,7 @@ func (h *AttributeValueHandler) ListByAttributeID(
 	c *gin.Context,
 ) {
 	attributeID, err := uuid.Parse(
-		c.Param("attribute_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(

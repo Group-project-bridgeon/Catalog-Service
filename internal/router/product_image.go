@@ -19,12 +19,12 @@ func RegisterProductImageRoutes(
 	images.PUT("/:id", h.Update)
 
 	r.GET(
-		"/api/v1/catalog/products/:product_id/images",
+		"/api/v1/catalog/products/:id/images",
 		h.ListByProductID,
 	)
 
 	r.GET(
-		"/api/v1/catalog/product-variants/:variant_id/images",
+		"/api/v1/catalog/product-variants/:id/images",
 		h.ListByVariantID,
 	)
 }

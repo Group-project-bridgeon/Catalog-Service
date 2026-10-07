@@ -19,12 +19,12 @@ func RegisterPriceRoutes(
 	prices.PUT("/:id", h.Update)
 
 	r.GET(
-		"/api/v1/catalog/price-lists/:price_list_id/prices",
+		"/api/v1/catalog/price-lists/:id/prices",
 		h.ListByPriceListID,
 	)
 
 	r.GET(
-		"/api/v1/catalog/product-variants/:variant_id/prices",
+		"/api/v1/catalog/product-variants/:id/prices",
 		h.ListByVariantID,
 	)
 }

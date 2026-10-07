@@ -173,7 +173,7 @@ func (h *PriceHandler) ListByPriceListID(
 	c *gin.Context,
 ) {
 	priceListID, err := uuid.Parse(
-		c.Param("price_list_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(
@@ -207,7 +207,7 @@ func (h *PriceHandler) ListByVariantID(
 	c *gin.Context,
 ) {
 	variantID, err := uuid.Parse(
-		c.Param("variant_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(

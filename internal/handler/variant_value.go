@@ -166,7 +166,7 @@ func (h *VariantValueHandler) ListByVariantID(
 	c *gin.Context,
 ) {
 	variantID, err := uuid.Parse(
-		c.Param("variant_id"),
+		c.Param("id"),
 	)
 	if err != nil {
 		c.JSON(
