@@ -119,6 +119,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	attributeRepository := postgresrepo.NewAttributeRepository(
+		queries,
+	)
+
+	attributeService := service.NewAttributeService(
+		attributeRepository,
+	)
+
+	attributeHandler := handler.NewAttributeHandler(
+		attributeService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -142,6 +155,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterProductRoutes(
 		httpHandler,
 		productHandler,
+	)
+
+	router.RegisterAttributeRoutes(
+		httpHandler,
+		attributeHandler,
 	)
 
 	server := &http.Server{

@@ -51,8 +51,7 @@ type ProductVariantRepository struct {
 	queries productVariantQueries
 }
 
-var _ repository.ProductVariantRepository =
-	(*ProductVariantRepository)(nil)
+var _ repository.ProductVariantRepository = (*ProductVariantRepository)(nil)
 
 func NewProductVariantRepository(
 	queries productVariantQueries,
