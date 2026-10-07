@@ -145,6 +145,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	variantValueRepository := postgresrepo.NewVariantValueRepository(
+		queries,
+	)
+
+	variantValueService := service.NewVariantValueService(
+		variantValueRepository,
+	)
+
+	variantValueHandler := handler.NewVariantValueHandler(
+		variantValueService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -178,6 +191,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterAttributeValueRoutes(
 		httpHandler,
 		attributeValueHandler,
+	)
+
+	router.RegisterVariantValueRoutes(
+		httpHandler,
+		variantValueHandler,
 	)
 
 	server := &http.Server{
