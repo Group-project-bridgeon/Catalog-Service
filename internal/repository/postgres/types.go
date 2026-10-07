@@ -185,3 +185,22 @@ func pgNumericToDecimalString(
 
 	return &result, nil
 }
+
+func int32ToPGInt4(
+	value int32,
+) pgtype.Int4 {
+	return pgtype.Int4{
+		Int32: value,
+		Valid: true,
+	}
+}
+
+func pgInt4ToInt32(
+	value pgtype.Int4,
+) int32 {
+	if !value.Valid {
+		return 0
+	}
+
+	return value.Int32
+}

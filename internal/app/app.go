@@ -158,6 +158,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	productImageRepository := postgresrepo.NewProductImageRepository(
+		queries,
+	)
+
+	productImageService := service.NewProductImageService(
+		productImageRepository,
+	)
+
+	productImageHandler := handler.NewProductImageHandler(
+		productImageService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -196,6 +209,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterVariantValueRoutes(
 		httpHandler,
 		variantValueHandler,
+	)
+
+	router.RegisterProductImageRoutes(
+		httpHandler,
+		productImageHandler,
 	)
 
 	server := &http.Server{
