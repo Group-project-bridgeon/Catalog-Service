@@ -184,6 +184,19 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	priceRepository := postgresrepo.NewPriceRepository(
+		queries,
+	)
+
+	priceService := service.NewPriceService(
+		priceRepository,
+	)
+
+	priceHandler := handler.NewPriceHandler(
+		priceService,
+		log,
+	)
+
 	httpHandler := router.New(
 		db,
 		log,
@@ -232,6 +245,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterPriceListRoutes(
 		httpHandler,
 		priceListHandler,
+	)
+
+	router.RegisterPriceRoutes(
+		httpHandler,
+		priceHandler,
 	)
 
 	server := &http.Server{
