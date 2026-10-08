@@ -16,13 +16,25 @@ WHERE variant_id = $1
 -- name: ListVariantValues :many
 SELECT *
 FROM catalog_variant_values
-ORDER BY variant_id, attribute_id;
-
--- name: ListVariantValuesByVariantID :many
-SELECT *
-FROM catalog_variant_values
-WHERE variant_id = $1
-ORDER BY attribute_id;
+WHERE
+    (
+        sqlc.narg(cursor_variant_id)::uuid IS NULL
+        OR (
+            variant_id,
+            attribute_id
+        ) > (
+            sqlc.narg(cursor_variant_id)::uuid,
+            sqlc.narg(cursor_attribute_id)::uuid
+        )
+    )
+    AND (
+        sqlc.narg(variant_id)::uuid IS NULL
+        OR variant_id = sqlc.narg(variant_id)::uuid
+    )
+ORDER BY
+    variant_id,
+    attribute_id
+LIMIT sqlc.arg(page_size)::int;
 
 -- name: UpdateVariantValue :one
 UPDATE catalog_variant_values
@@ -76,8 +88,8 @@ SELECT EXISTS (
             SELECT 1
             FROM catalog_variant_values existing
             WHERE existing.variant_id = ov.id
-              AND existing.attribute_id = candidate.attribute_id
-              AND existing.attribute_value_id = candidate.attribute_value_id
+            AND existing.attribute_id = candidate.attribute_id
+            AND existing.attribute_value_id = candidate.attribute_value_id
         )
     )
 );

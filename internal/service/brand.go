@@ -50,7 +50,7 @@ func (s *BrandService) Create(
 		return domain.Brand{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Brand{}, fmt.Errorf(
 			"generate brand id: %w",

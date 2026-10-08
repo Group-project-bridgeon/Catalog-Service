@@ -169,8 +169,10 @@ func (h *UnitHandler) List(c *gin.Context) {
 		)
 	}
 
-	c.JSON(
-		http.StatusOK,
+	writeReferenceJSON(
+		c,
+		h.log,
+		"list units",
 		response,
 	)
 }

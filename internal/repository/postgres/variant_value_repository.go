@@ -7,7 +7,6 @@ import (
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres/catalogdb"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type variantValueQueries interface {
@@ -23,11 +22,7 @@ type variantValueQueries interface {
 
 	ListVariantValues(
 		context.Context,
-	) ([]catalogdb.CatalogVariantValue, error)
-
-	ListVariantValuesByVariantID(
-		context.Context,
-		pgtype.UUID,
+		catalogdb.ListVariantValuesParams,
 	) ([]catalogdb.CatalogVariantValue, error)
 
 	UpdateVariantValue(
@@ -101,42 +96,20 @@ func (r *VariantValueRepository) GetByVariantAndAttribute(
 
 func (r *VariantValueRepository) List(
 	ctx context.Context,
+	params repository.ListVariantValuesParams,
 ) ([]domain.VariantValue, error) {
-	rows, err := r.queries.ListVariantValues(ctx)
+	rows, err := r.queries.ListVariantValues(
+		ctx,
+		catalogdb.ListVariantValuesParams{
+			CursorVariantID:   nullableUUIDToPG(params.CursorVariantID),
+			CursorAttributeID: nullableUUIDToPG(params.CursorAttributeID),
+			VariantID:         nullableUUIDToPG(params.VariantID),
+			PageSize:          params.PageSize,
+		},
+	)
 	if err != nil {
 		return nil, mapDBError(
 			"list variant values",
-			err,
-		)
-	}
-
-	values := make(
-		[]domain.VariantValue,
-		0,
-		len(rows),
-	)
-
-	for _, row := range rows {
-		values = append(
-			values,
-			variantValueToDomain(row),
-		)
-	}
-
-	return values, nil
-}
-
-func (r *VariantValueRepository) ListByVariantID(
-	ctx context.Context,
-	variantID uuid.UUID,
-) ([]domain.VariantValue, error) {
-	rows, err := r.queries.ListVariantValuesByVariantID(
-		ctx,
-		uuidToPG(variantID),
-	)
-	if err != nil {
-		return nil, mapDBError(
-			"list variant values by variant",
 			err,
 		)
 	}

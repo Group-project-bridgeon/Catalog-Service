@@ -13,10 +13,12 @@ import (
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/config"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/handler"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/platform/database"
+	cachedrepo "github.com/Group-project-bridgeon/Catalog-Service/internal/repository/cache"
 	postgresrepo "github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres/catalogdb"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/router"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/service"
+	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
 )
@@ -56,6 +58,14 @@ func Run(log zerolog.Logger) error {
 	db, err := database.NewPool(
 		ctx,
 		cfg.DatabaseURL,
+		database.PoolConfig{
+			MaxConns:          cfg.Database.MaxConns,
+			MinConns:          cfg.Database.MinConns,
+			MaxConnLifetime:   cfg.Database.MaxConnLifetime,
+			MaxConnIdleTime:   cfg.Database.MaxConnIdleTime,
+			HealthCheckPeriod: cfg.Database.HealthCheckPeriod,
+			StatementTimeout:  cfg.Database.StatementTimeout,
+		},
 	)
 	if err != nil {
 		return fmt.Errorf(
@@ -67,8 +77,11 @@ func Run(log zerolog.Logger) error {
 
 	queries := catalogdb.New(db)
 
-	categoryRepository := postgresrepo.NewCategoryRepository(
-		queries,
+	categoryRepository := cachedrepo.NewCategoryRepository(
+		postgresrepo.NewCategoryRepository(
+			queries,
+		),
+		cfg.Cache.ReferenceTTL,
 	)
 
 	categoryService := service.NewCategoryService(
@@ -80,8 +93,11 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
-	brandRepository := postgresrepo.NewBrandRepository(
-		queries,
+	brandRepository := cachedrepo.NewBrandRepository(
+		postgresrepo.NewBrandRepository(
+			queries,
+		),
+		cfg.Cache.ReferenceTTL,
 	)
 
 	brandService := service.NewBrandService(
@@ -93,8 +109,11 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
-	unitRepository := postgresrepo.NewUnitRepository(
-		queries,
+	unitRepository := cachedrepo.NewUnitRepository(
+		postgresrepo.NewUnitRepository(
+			queries,
+		),
+		cfg.Cache.ReferenceTTL,
 	)
 
 	unitService := service.NewUnitService(
@@ -132,8 +151,11 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
-	attributeRepository := postgresrepo.NewAttributeRepository(
-		queries,
+	attributeRepository := cachedrepo.NewAttributeRepository(
+		postgresrepo.NewAttributeRepository(
+			queries,
+		),
+		cfg.Cache.ReferenceTTL,
 	)
 
 	attributeService := service.NewAttributeService(
@@ -210,9 +232,26 @@ func Run(log zerolog.Logger) error {
 		log,
 	)
 
+	productDetailRepository := postgresrepo.NewProductDetailRepository(
+		queries,
+	)
+
+	productDetailService := service.NewProductDetailService(
+		productDetailRepository,
+	)
+
+	productDetailHandler := handler.NewProductDetailHandler(
+		productDetailService,
+		log,
+	)
+
+	gin.SetMode(cfg.GinMode)
+
 	httpHandler := router.New(
 		db,
 		log,
+		cfg.HTTP.MaxRequestBodyBytes,
+		cfg.HTTP.SlowRequestThreshold,
 	)
 
 	router.RegisterCategoryRoutes(
@@ -268,6 +307,11 @@ func Run(log zerolog.Logger) error {
 	router.RegisterPriceRoutes(
 		httpHandler,
 		priceHandler,
+	)
+
+	router.RegisterProductDetailRoutes(
+		httpHandler,
+		productDetailHandler,
 	)
 
 	server := &http.Server{

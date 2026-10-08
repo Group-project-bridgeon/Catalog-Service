@@ -25,17 +25,20 @@ type priceService interface {
 
 	List(
 		context.Context,
-	) ([]domain.Price, error)
+		service.ListPricesInput,
+	) (service.Page[domain.Price], error)
 
 	ListByPriceListID(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.Price, error)
+		service.PageInput,
+	) (service.Page[domain.Price], error)
 
 	ListByVariantID(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.Price, error)
+		service.PageInput,
+	) (service.Page[domain.Price], error)
 
 	Update(
 		context.Context,
@@ -76,6 +79,11 @@ type priceResponse struct {
 	UnitPrice   string    `json:"unit_price"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type pricePageResponse struct {
+	Items      []priceResponse `json:"items"`
+	NextCursor *string         `json:"next_cursor"`
 }
 
 func (h *PriceHandler) Create(
@@ -150,8 +158,37 @@ func (h *PriceHandler) GetByID(
 func (h *PriceHandler) List(
 	c *gin.Context,
 ) {
-	prices, err := h.service.List(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	priceListID, err := parseOptionalUUIDQuery(
+		c,
+		"price_list_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	variantID, err := parseOptionalUUIDQuery(
+		c,
+		"variant_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.List(
 		c.Request.Context(),
+		service.ListPricesInput{
+			Page:        pageInput,
+			PriceListID: priceListID,
+			VariantID:   variantID,
+		},
 	)
 	if err != nil {
 		writeServiceError(
@@ -165,7 +202,10 @@ func (h *PriceHandler) List(
 
 	c.JSON(
 		http.StatusOK,
-		toPriceResponses(prices),
+		pricePageResponse{
+			Items:      toPriceResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -183,9 +223,16 @@ func (h *PriceHandler) ListByPriceListID(
 		return
 	}
 
-	prices, err := h.service.ListByPriceListID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByPriceListID(
 		c.Request.Context(),
 		priceListID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -199,7 +246,10 @@ func (h *PriceHandler) ListByPriceListID(
 
 	c.JSON(
 		http.StatusOK,
-		toPriceResponses(prices),
+		pricePageResponse{
+			Items:      toPriceResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -217,9 +267,16 @@ func (h *PriceHandler) ListByVariantID(
 		return
 	}
 
-	prices, err := h.service.ListByVariantID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByVariantID(
 		c.Request.Context(),
 		variantID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -233,7 +290,10 @@ func (h *PriceHandler) ListByVariantID(
 
 	c.JSON(
 		http.StatusOK,
-		toPriceResponses(prices),
+		pricePageResponse{
+			Items:      toPriceResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 

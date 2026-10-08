@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/pagination"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -14,6 +15,17 @@ import (
 var unitPricePattern = regexp.MustCompile(
 	`^[0-9]{1,12}(\.[0-9]{1,2})?$`,
 )
+
+type ListPricesInput struct {
+	Page        PageInput
+	PriceListID *uuid.UUID
+	VariantID   *uuid.UUID
+}
+
+type priceCursor struct {
+	PriceListID uuid.UUID `json:"price_list_id"`
+	VariantID   uuid.UUID `json:"variant_id"`
+}
 
 type CreatePriceInput struct {
 	PriceListID uuid.UUID
@@ -62,7 +74,7 @@ func (s *PriceService) Create(
 		return domain.Price{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Price{}, fmt.Errorf(
 			"generate price id: %w",
@@ -147,66 +159,129 @@ func (s *PriceService) GetByPriceListAndVariant(
 
 func (s *PriceService) List(
 	ctx context.Context,
-) ([]domain.Price, error) {
-	prices, err := s.repository.List(ctx)
+	input ListPricesInput,
+) (Page[domain.Price], error) {
+	page, err := normalizePageInput(input.Page)
 	if err != nil {
-		return nil, mapRepositoryError(
-			"list prices",
-			err,
+		return Page[domain.Price]{}, fmt.Errorf(
+			"invalid pagination: %w",
+			ErrInvalidArgument,
 		)
 	}
 
-	return prices, nil
+	var cursor priceCursor
+
+	if page.Cursor != "" {
+		if err := pagination.Decode(
+			page.Cursor,
+			&cursor,
+		); err != nil {
+			return Page[domain.Price]{}, fmt.Errorf(
+				"invalid cursor: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	var cursorPriceListID *uuid.UUID
+	var cursorVariantID *uuid.UUID
+
+	if page.Cursor != "" {
+		cursorPriceListID = &cursor.PriceListID
+		cursorVariantID = &cursor.VariantID
+	}
+
+	prices, err := s.repository.List(
+		ctx,
+		repository.ListPricesParams{
+			CursorPriceListID: cursorPriceListID,
+			CursorVariantID:   cursorVariantID,
+			PriceListID:       input.PriceListID,
+			VariantID:         input.VariantID,
+			PageSize:          int32(page.Limit + 1),
+		},
+	)
+	if err != nil {
+		return Page[domain.Price]{},
+			mapRepositoryError(
+				"list prices",
+				err,
+			)
+	}
+
+	prices, hasMore := trimPage(
+		prices,
+		page.Limit,
+	)
+
+	var nextCursor *string
+
+	if hasMore && len(prices) > 0 {
+		last := prices[len(prices)-1]
+
+		encoded, err := pagination.Encode(
+			priceCursor{
+				PriceListID: last.PriceListID,
+				VariantID:   last.VariantID,
+			},
+		)
+		if err != nil {
+			return Page[domain.Price]{},
+				fmt.Errorf(
+					"encode price cursor: %w",
+					err,
+				)
+		}
+
+		nextCursor = &encoded
+	}
+
+	return Page[domain.Price]{
+		Items:      prices,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (s *PriceService) ListByPriceListID(
 	ctx context.Context,
 	priceListID uuid.UUID,
-) ([]domain.Price, error) {
+	page PageInput,
+) (Page[domain.Price], error) {
 	if priceListID == uuid.Nil {
-		return nil, fmt.Errorf(
+		return Page[domain.Price]{}, fmt.Errorf(
 			"price list id is required: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	prices, err := s.repository.ListByPriceListID(
+	return s.List(
 		ctx,
-		priceListID,
+		ListPricesInput{
+			Page:        page,
+			PriceListID: &priceListID,
+		},
 	)
-	if err != nil {
-		return nil, mapRepositoryError(
-			"list prices by price list",
-			err,
-		)
-	}
-
-	return prices, nil
 }
 
 func (s *PriceService) ListByVariantID(
 	ctx context.Context,
 	variantID uuid.UUID,
-) ([]domain.Price, error) {
+	page PageInput,
+) (Page[domain.Price], error) {
 	if variantID == uuid.Nil {
-		return nil, fmt.Errorf(
+		return Page[domain.Price]{}, fmt.Errorf(
 			"variant id is required: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	prices, err := s.repository.ListByVariantID(
+	return s.List(
 		ctx,
-		variantID,
+		ListPricesInput{
+			Page:      page,
+			VariantID: &variantID,
+		},
 	)
-	if err != nil {
-		return nil, mapRepositoryError(
-			"list prices by variant",
-			err,
-		)
-	}
-
-	return prices, nil
 }
 
 func (s *PriceService) Update(

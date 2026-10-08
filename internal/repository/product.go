@@ -26,6 +26,15 @@ type UpdateProductParams struct {
 	Description *string
 }
 
+type ListProductsParams struct {
+	CursorName *string
+	CursorID   *uuid.UUID
+	CategoryID *uuid.UUID
+	BrandID    *uuid.UUID
+	IsActive   *bool
+	PageSize   int32
+}
+
 type ProductRepository interface {
 	Create(
 		context.Context,
@@ -44,6 +53,7 @@ type ProductRepository interface {
 
 	List(
 		context.Context,
+		ListProductsParams,
 	) ([]domain.Product, error)
 
 	Update(

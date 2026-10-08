@@ -109,11 +109,53 @@ func (q *Queries) GetProductByID(ctx context.Context, id pgtype.UUID) (CatalogPr
 const listProducts = `-- name: ListProducts :many
 SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
 FROM catalog_products
-ORDER BY name
+WHERE
+    (
+        $1::text IS NULL
+        OR (
+            name,
+            id
+        ) > (
+            $1::text,
+            $2::uuid
+        )
+    )
+    AND (
+        $3::uuid IS NULL
+        OR category_id = $3::uuid
+    )
+    AND (
+        $4::uuid IS NULL
+        OR brand_id = $4::uuid
+    )
+    AND (
+        $5::boolean IS NULL
+        OR is_active = $5::boolean
+    )
+ORDER BY
+    name,
+    id
+LIMIT $6::int
 `
 
-func (q *Queries) ListProducts(ctx context.Context) ([]CatalogProduct, error) {
-	rows, err := q.db.Query(ctx, listProducts)
+type ListProductsParams struct {
+	CursorName pgtype.Text
+	CursorID   pgtype.UUID
+	CategoryID pgtype.UUID
+	BrandID    pgtype.UUID
+	IsActive   pgtype.Bool
+	PageSize   int32
+}
+
+func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]CatalogProduct, error) {
+	rows, err := q.db.Query(ctx, listProducts,
+		arg.CursorName,
+		arg.CursorID,
+		arg.CategoryID,
+		arg.BrandID,
+		arg.IsActive,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}

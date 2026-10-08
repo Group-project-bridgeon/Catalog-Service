@@ -23,4 +23,5 @@ func TestAllRoutesRegisterWithoutPanic(t *testing.T) {
 	RegisterProductImageRoutes(r, (*handler.ProductImageHandler)(nil))
 	RegisterPriceListRoutes(r, (*handler.PriceListHandler)(nil))
 	RegisterPriceRoutes(r, (*handler.PriceHandler)(nil))
+	RegisterProductDetailRoutes(r, (*handler.ProductDetailHandler)(nil))
 }

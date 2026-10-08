@@ -22,19 +22,29 @@ WHERE price_list_id = $1
 -- name: ListPrices :many
 SELECT *
 FROM catalog_prices
-ORDER BY price_list_id, variant_id;
-
--- name: ListPricesByPriceListID :many
-SELECT *
-FROM catalog_prices
-WHERE price_list_id = $1
-ORDER BY variant_id;
-
--- name: ListPricesByVariantID :many
-SELECT *
-FROM catalog_prices
-WHERE variant_id = $1
-ORDER BY price_list_id;
+WHERE
+    (
+        sqlc.narg(cursor_price_list_id)::uuid IS NULL
+        OR (
+            price_list_id,
+            variant_id
+        ) > (
+            sqlc.narg(cursor_price_list_id)::uuid,
+            sqlc.narg(cursor_variant_id)::uuid
+        )
+    )
+    AND (
+        sqlc.narg(price_list_id)::uuid IS NULL
+        OR price_list_id = sqlc.narg(price_list_id)::uuid
+    )
+    AND (
+        sqlc.narg(variant_id)::uuid IS NULL
+        OR variant_id = sqlc.narg(variant_id)::uuid
+    )
+ORDER BY
+    price_list_id,
+    variant_id
+LIMIT sqlc.arg(page_size)::int;
 
 -- name: UpdatePrice :one
 UPDATE catalog_prices

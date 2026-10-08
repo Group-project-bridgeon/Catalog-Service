@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -26,6 +27,8 @@ func TestHealth(t *testing.T) {
 	r := New(
 		fakeDatabase{},
 		log,
+		1<<20,
+		500*time.Millisecond,
 	)
 
 	req := httptest.NewRequest(
@@ -53,6 +56,8 @@ func TestReadyWhenDatabaseAvailable(t *testing.T) {
 	r := New(
 		fakeDatabase{},
 		log,
+		1<<20,
+		500*time.Millisecond,
 	)
 
 	req := httptest.NewRequest(
@@ -82,6 +87,8 @@ func TestReadyWhenDatabaseUnavailable(t *testing.T) {
 			err: errors.New("database unavailable"),
 		},
 		log,
+		1<<20,
+		500*time.Millisecond,
 	)
 
 	req := httptest.NewRequest(

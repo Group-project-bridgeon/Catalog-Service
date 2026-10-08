@@ -23,16 +23,7 @@ type productImageQueries interface {
 
 	ListProductImages(
 		context.Context,
-	) ([]catalogdb.CatalogProductImage, error)
-
-	ListProductImagesByProductID(
-		context.Context,
-		pgtype.UUID,
-	) ([]catalogdb.CatalogProductImage, error)
-
-	ListProductImagesByVariantID(
-		context.Context,
-		pgtype.UUID,
+		catalogdb.ListProductImagesParams,
 	) ([]catalogdb.CatalogProductImage, error)
 
 	UpdateProductImage(
@@ -71,7 +62,7 @@ func (r *ProductImageRepository) Create(
 			ProductID: uuidToPG(params.ProductID),
 			VariantID: nullableUUIDToPG(params.VariantID),
 			ImageUrl:  params.ImageURL,
-			SortOrder: int32ToPGInt4(params.SortOrder),
+			SortOrder: params.SortOrder,
 		},
 	)
 	if err != nil {
@@ -104,47 +95,35 @@ func (r *ProductImageRepository) GetByID(
 
 func (r *ProductImageRepository) List(
 	ctx context.Context,
+	params repository.ListProductImagesParams,
 ) ([]domain.ProductImage, error) {
-	rows, err := r.queries.ListProductImages(ctx)
+	rows, err := r.queries.ListProductImages(
+		ctx,
+		catalogdb.ListProductImagesParams{
+			CursorProductID: nullableUUIDToPG(
+				params.CursorProductID,
+			),
+			CursorSortOrder: int32PtrToPGInt4(
+				params.CursorSortOrder,
+			),
+			CursorCreatedAt: timePtrToPGTimestamptz(
+				params.CursorCreatedAt,
+			),
+			CursorID: nullableUUIDToPG(
+				params.CursorID,
+			),
+			ProductID: nullableUUIDToPG(
+				params.ProductID,
+			),
+			VariantID: nullableUUIDToPG(
+				params.VariantID,
+			),
+			PageSize: params.PageSize,
+		},
+	)
 	if err != nil {
 		return nil, mapDBError(
 			"list product images",
-			err,
-		)
-	}
-
-	return productImagesToDomain(rows), nil
-}
-
-func (r *ProductImageRepository) ListByProductID(
-	ctx context.Context,
-	productID uuid.UUID,
-) ([]domain.ProductImage, error) {
-	rows, err := r.queries.ListProductImagesByProductID(
-		ctx,
-		uuidToPG(productID),
-	)
-	if err != nil {
-		return nil, mapDBError(
-			"list product images by product",
-			err,
-		)
-	}
-
-	return productImagesToDomain(rows), nil
-}
-
-func (r *ProductImageRepository) ListByVariantID(
-	ctx context.Context,
-	variantID uuid.UUID,
-) ([]domain.ProductImage, error) {
-	rows, err := r.queries.ListProductImagesByVariantID(
-		ctx,
-		uuidToPG(variantID),
-	)
-	if err != nil {
-		return nil, mapDBError(
-			"list product images by variant",
 			err,
 		)
 	}
@@ -162,7 +141,7 @@ func (r *ProductImageRepository) Update(
 			ID:        uuidToPG(params.ID),
 			VariantID: nullableUUIDToPG(params.VariantID),
 			ImageUrl:  params.ImageURL,
-			SortOrder: int32ToPGInt4(params.SortOrder),
+			SortOrder: params.SortOrder,
 		},
 	)
 	if err != nil {
@@ -206,7 +185,7 @@ func productImageToDomain(
 		ProductID: pgUUIDToUUID(row.ProductID),
 		VariantID: pgUUIDToNullableUUID(row.VariantID),
 		ImageURL:  row.ImageUrl,
-		SortOrder: pgInt4ToInt32(row.SortOrder),
+		SortOrder: row.SortOrder,
 		CreatedAt: row.CreatedAt.Time,
 	}
 }

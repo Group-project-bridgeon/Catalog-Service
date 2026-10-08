@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
 	"github.com/google/uuid"
@@ -22,6 +23,16 @@ type UpdateProductImageParams struct {
 	SortOrder int32
 }
 
+type ListProductImagesParams struct {
+	CursorProductID *uuid.UUID
+	CursorSortOrder *int32
+	CursorCreatedAt *time.Time
+	CursorID        *uuid.UUID
+	ProductID       *uuid.UUID
+	VariantID       *uuid.UUID
+	PageSize        int32
+}
+
 type ProductImageRepository interface {
 	Create(
 		context.Context,
@@ -35,16 +46,7 @@ type ProductImageRepository interface {
 
 	List(
 		context.Context,
-	) ([]domain.ProductImage, error)
-
-	ListByProductID(
-		context.Context,
-		uuid.UUID,
-	) ([]domain.ProductImage, error)
-
-	ListByVariantID(
-		context.Context,
-		uuid.UUID,
+		ListProductImagesParams,
 	) ([]domain.ProductImage, error)
 
 	Update(

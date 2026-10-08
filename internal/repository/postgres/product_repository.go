@@ -28,6 +28,7 @@ type productQueries interface {
 
 	ListProducts(
 		context.Context,
+		catalogdb.ListProductsParams,
 	) ([]catalogdb.CatalogProduct, error)
 
 	UpdateProduct(
@@ -119,8 +120,29 @@ func (r *ProductRepository) GetByCode(
 
 func (r *ProductRepository) List(
 	ctx context.Context,
+	params repository.ListProductsParams,
 ) ([]domain.Product, error) {
-	rows, err := r.queries.ListProducts(ctx)
+	rows, err := r.queries.ListProducts(
+		ctx,
+		catalogdb.ListProductsParams{
+			CursorName: stringPtrToPGText(
+				params.CursorName,
+			),
+			CursorID: nullableUUIDToPG(
+				params.CursorID,
+			),
+			CategoryID: nullableUUIDToPG(
+				params.CategoryID,
+			),
+			BrandID: nullableUUIDToPG(
+				params.BrandID,
+			),
+			IsActive: boolPtrToPGBool(
+				params.IsActive,
+			),
+			PageSize: params.PageSize,
+		},
+	)
 	if err != nil {
 		return nil, mapDBError(
 			"list products",

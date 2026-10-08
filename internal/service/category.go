@@ -54,7 +54,7 @@ func (s *CategoryService) Create(
 		return domain.Category{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Category{}, fmt.Errorf(
 			"generate category id: %w",

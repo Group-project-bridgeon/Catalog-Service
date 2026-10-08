@@ -24,11 +24,7 @@ type fakeVariantValueRepository struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.VariantValue, error)
-
-	listByVariantFn func(
-		context.Context,
-		uuid.UUID,
+		repository.ListVariantValuesParams,
 	) ([]domain.VariantValue, error)
 
 	updateFn func(
@@ -73,26 +69,13 @@ func (f *fakeVariantValueRepository) GetByVariantAndAttribute(
 
 func (f *fakeVariantValueRepository) List(
 	ctx context.Context,
+	params repository.ListVariantValuesParams,
 ) ([]domain.VariantValue, error) {
 	if f.listFn == nil {
 		return nil, nil
 	}
 
-	return f.listFn(ctx)
-}
-
-func (f *fakeVariantValueRepository) ListByVariantID(
-	ctx context.Context,
-	variantID uuid.UUID,
-) ([]domain.VariantValue, error) {
-	if f.listByVariantFn == nil {
-		return nil, nil
-	}
-
-	return f.listByVariantFn(
-		ctx,
-		variantID,
-	)
+	return f.listFn(ctx, params)
 }
 
 func (f *fakeVariantValueRepository) Update(
@@ -356,5 +339,46 @@ func TestVariantValueServiceUpdate(
 
 	if result.AttributeValueID != valueID {
 		t.Fatal("unexpected value ID")
+	}
+}
+
+func TestVariantValueServiceList(t *testing.T) {
+	variantID := uuid.New()
+
+	repo := &fakeVariantValueRepository{
+		listFn: func(
+			_ context.Context,
+			params repository.ListVariantValuesParams,
+		) ([]domain.VariantValue, error) {
+			if params.PageSize != 3 {
+				t.Fatalf("expected PageSize 3, got %d", params.PageSize)
+			}
+			if params.VariantID == nil || *params.VariantID != variantID {
+				t.Fatalf("expected VariantID %v", variantID)
+			}
+
+			return []domain.VariantValue{
+				{VariantID: variantID, AttributeID: uuid.New(), AttributeValueID: uuid.New()},
+				{VariantID: variantID, AttributeID: uuid.New(), AttributeValueID: uuid.New()},
+				{VariantID: variantID, AttributeID: uuid.New(), AttributeValueID: uuid.New()}, // extra
+			}, nil
+		},
+	}
+
+	s := NewVariantValueService(repo)
+
+	page, err := s.List(context.Background(), ListVariantValuesInput{
+		Page:      PageInput{Limit: 2},
+		VariantID: &variantID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(page.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(page.Items))
+	}
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("expected next cursor")
 	}
 }

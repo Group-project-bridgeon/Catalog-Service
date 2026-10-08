@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/pagination"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -17,6 +18,16 @@ type CreateVariantValueInput struct {
 
 type UpdateVariantValueInput struct {
 	AttributeValueID uuid.UUID
+}
+
+type ListVariantValuesInput struct {
+	Page      PageInput
+	VariantID *uuid.UUID
+}
+
+type variantValueCursor struct {
+	VariantID   uuid.UUID `json:"variant_id"`
+	AttributeID uuid.UUID `json:"attribute_id"`
 }
 
 type VariantValueService struct {
@@ -120,41 +131,103 @@ func (s *VariantValueService) GetByVariantAndAttribute(
 
 func (s *VariantValueService) List(
 	ctx context.Context,
-) ([]domain.VariantValue, error) {
-	values, err := s.repository.List(ctx)
+	input ListVariantValuesInput,
+) (Page[domain.VariantValue], error) {
+	page, err := normalizePageInput(input.Page)
 	if err != nil {
-		return nil, mapRepositoryError(
-			"list variant values",
-			err,
+		return Page[domain.VariantValue]{}, fmt.Errorf(
+			"invalid pagination: %w",
+			ErrInvalidArgument,
 		)
 	}
 
-	return values, nil
+	var cursor variantValueCursor
+	if page.Cursor != "" {
+		if err := pagination.Decode(
+			page.Cursor,
+			&cursor,
+		); err != nil {
+			return Page[domain.VariantValue]{}, fmt.Errorf(
+				"invalid cursor: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	var cursorVariantID *uuid.UUID
+	var cursorAttributeID *uuid.UUID
+
+	if page.Cursor != "" {
+		cursorVariantID = &cursor.VariantID
+		cursorAttributeID = &cursor.AttributeID
+	}
+
+	values, err := s.repository.List(
+		ctx,
+		repository.ListVariantValuesParams{
+			CursorVariantID:   cursorVariantID,
+			CursorAttributeID: cursorAttributeID,
+			VariantID:         input.VariantID,
+			PageSize:          int32(page.Limit + 1),
+		},
+	)
+	if err != nil {
+		return Page[domain.VariantValue]{},
+			mapRepositoryError(
+				"list variant values",
+				err,
+			)
+	}
+
+	values, hasMore := trimPage(
+		values,
+		page.Limit,
+	)
+
+	var nextCursor *string
+	if hasMore && len(values) > 0 {
+		last := values[len(values)-1]
+		encoded, err := pagination.Encode(
+			variantValueCursor{
+				VariantID:   last.VariantID,
+				AttributeID: last.AttributeID,
+			},
+		)
+		if err != nil {
+			return Page[domain.VariantValue]{},
+				fmt.Errorf(
+					"encode variant value cursor: %w",
+					err,
+				)
+		}
+		nextCursor = &encoded
+	}
+
+	return Page[domain.VariantValue]{
+		Items:      values,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (s *VariantValueService) ListByVariantID(
 	ctx context.Context,
 	variantID uuid.UUID,
-) ([]domain.VariantValue, error) {
+	page PageInput,
+) (Page[domain.VariantValue], error) {
 	if variantID == uuid.Nil {
-		return nil, fmt.Errorf(
+		return Page[domain.VariantValue]{}, fmt.Errorf(
 			"variant id is required: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	values, err := s.repository.ListByVariantID(
+	return s.List(
 		ctx,
-		variantID,
+		ListVariantValuesInput{
+			Page:      page,
+			VariantID: &variantID,
+		},
 	)
-	if err != nil {
-		return nil, mapRepositoryError(
-			"list variant values by variant",
-			err,
-		)
-	}
-
-	return values, nil
 }
 
 func (s *VariantValueService) Update(

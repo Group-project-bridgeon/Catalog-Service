@@ -25,17 +25,20 @@ type productImageService interface {
 
 	List(
 		context.Context,
-	) ([]domain.ProductImage, error)
+		service.ListProductImagesInput,
+	) (service.Page[domain.ProductImage], error)
 
 	ListByProductID(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.ProductImage, error)
+		service.PageInput,
+	) (service.Page[domain.ProductImage], error)
 
 	ListByVariantID(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.ProductImage, error)
+		service.PageInput,
+	) (service.Page[domain.ProductImage], error)
 
 	Update(
 		context.Context,
@@ -79,6 +82,11 @@ type productImageResponse struct {
 	ImageURL  string     `json:"image_url"`
 	SortOrder int32      `json:"sort_order"`
 	CreatedAt time.Time  `json:"created_at"`
+}
+
+type productImagePageResponse struct {
+	Items      []productImageResponse `json:"items"`
+	NextCursor *string                `json:"next_cursor"`
 }
 
 func (h *ProductImageHandler) Create(
@@ -154,8 +162,37 @@ func (h *ProductImageHandler) GetByID(
 func (h *ProductImageHandler) List(
 	c *gin.Context,
 ) {
-	images, err := h.service.List(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	productID, err := parseOptionalUUIDQuery(
+		c,
+		"product_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	variantID, err := parseOptionalUUIDQuery(
+		c,
+		"variant_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.List(
 		c.Request.Context(),
+		service.ListProductImagesInput{
+			Page:      pageInput,
+			ProductID: productID,
+			VariantID: variantID,
+		},
 	)
 	if err != nil {
 		writeServiceError(
@@ -169,7 +206,10 @@ func (h *ProductImageHandler) List(
 
 	c.JSON(
 		http.StatusOK,
-		toProductImageResponses(images),
+		productImagePageResponse{
+			Items:      toProductImageResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -187,9 +227,16 @@ func (h *ProductImageHandler) ListByProductID(
 		return
 	}
 
-	images, err := h.service.ListByProductID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByProductID(
 		c.Request.Context(),
 		productID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -203,7 +250,10 @@ func (h *ProductImageHandler) ListByProductID(
 
 	c.JSON(
 		http.StatusOK,
-		toProductImageResponses(images),
+		productImagePageResponse{
+			Items:      toProductImageResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -221,9 +271,16 @@ func (h *ProductImageHandler) ListByVariantID(
 		return
 	}
 
-	images, err := h.service.ListByVariantID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByVariantID(
 		c.Request.Context(),
 		variantID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -237,7 +294,10 @@ func (h *ProductImageHandler) ListByVariantID(
 
 	c.JSON(
 		http.StatusOK,
-		toProductImageResponses(images),
+		productImagePageResponse{
+			Items:      toProductImageResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 

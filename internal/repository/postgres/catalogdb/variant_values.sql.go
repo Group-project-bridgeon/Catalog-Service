@@ -56,38 +56,41 @@ func (q *Queries) GetVariantValueByVariantAndAttribute(ctx context.Context, arg 
 const listVariantValues = `-- name: ListVariantValues :many
 SELECT variant_id, attribute_id, attribute_value_id
 FROM catalog_variant_values
-ORDER BY variant_id, attribute_id
+WHERE
+    (
+        $1::uuid IS NULL
+        OR (
+            variant_id,
+            attribute_id
+        ) > (
+            $1::uuid,
+            $2::uuid
+        )
+    )
+    AND (
+        $3::uuid IS NULL
+        OR variant_id = $3::uuid
+    )
+ORDER BY
+    variant_id,
+    attribute_id
+LIMIT $4::int
 `
 
-func (q *Queries) ListVariantValues(ctx context.Context) ([]CatalogVariantValue, error) {
-	rows, err := q.db.Query(ctx, listVariantValues)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CatalogVariantValue
-	for rows.Next() {
-		var i CatalogVariantValue
-		if err := rows.Scan(&i.VariantID, &i.AttributeID, &i.AttributeValueID); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ListVariantValuesParams struct {
+	CursorVariantID   pgtype.UUID
+	CursorAttributeID pgtype.UUID
+	VariantID         pgtype.UUID
+	PageSize          int32
 }
 
-const listVariantValuesByVariantID = `-- name: ListVariantValuesByVariantID :many
-SELECT variant_id, attribute_id, attribute_value_id
-FROM catalog_variant_values
-WHERE variant_id = $1
-ORDER BY attribute_id
-`
-
-func (q *Queries) ListVariantValuesByVariantID(ctx context.Context, variantID pgtype.UUID) ([]CatalogVariantValue, error) {
-	rows, err := q.db.Query(ctx, listVariantValuesByVariantID, variantID)
+func (q *Queries) ListVariantValues(ctx context.Context, arg ListVariantValuesParams) ([]CatalogVariantValue, error) {
+	rows, err := q.db.Query(ctx, listVariantValues,
+		arg.CursorVariantID,
+		arg.CursorAttributeID,
+		arg.VariantID,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +175,8 @@ SELECT EXISTS (
             SELECT 1
             FROM catalog_variant_values existing
             WHERE existing.variant_id = ov.id
-              AND existing.attribute_id = candidate.attribute_id
-              AND existing.attribute_value_id = candidate.attribute_value_id
+            AND existing.attribute_id = candidate.attribute_id
+            AND existing.attribute_value_id = candidate.attribute_value_id
         )
     )
 )

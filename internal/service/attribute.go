@@ -50,7 +50,7 @@ func (s *AttributeService) Create(
 		return domain.Attribute{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Attribute{}, fmt.Errorf(
 			"generate attribute id: %w",

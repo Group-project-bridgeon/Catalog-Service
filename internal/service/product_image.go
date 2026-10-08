@@ -6,7 +6,10 @@ import (
 	"net/url"
 	"strings"
 
+	"time"
+
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/pagination"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -22,6 +25,19 @@ type UpdateProductImageInput struct {
 	VariantID *uuid.UUID
 	ImageURL  string
 	SortOrder int32
+}
+
+type ListProductImagesInput struct {
+	Page      PageInput
+	ProductID *uuid.UUID
+	VariantID *uuid.UUID
+}
+
+type productImageCursor struct {
+	ProductID uuid.UUID `json:"product_id"`
+	SortOrder int32     `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
 }
 
 type ProductImageService struct {
@@ -62,7 +78,7 @@ func (s *ProductImageService) Create(
 		return domain.ProductImage{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.ProductImage{}, fmt.Errorf(
 			"generate product image id: %w",
@@ -112,66 +128,133 @@ func (s *ProductImageService) GetByID(
 
 func (s *ProductImageService) List(
 	ctx context.Context,
-) ([]domain.ProductImage, error) {
-	images, err := s.repository.List(ctx)
+	input ListProductImagesInput,
+) (Page[domain.ProductImage], error) {
+	page, err := normalizePageInput(input.Page)
 	if err != nil {
-		return nil, mapRepositoryError(
-			"list product images",
-			err,
+		return Page[domain.ProductImage]{}, fmt.Errorf(
+			"invalid pagination: %w",
+			ErrInvalidArgument,
 		)
 	}
 
-	return images, nil
+	var cursor productImageCursor
+	if page.Cursor != "" {
+		if err := pagination.Decode(
+			page.Cursor,
+			&cursor,
+		); err != nil {
+			return Page[domain.ProductImage]{}, fmt.Errorf(
+				"invalid cursor: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	var cursorProductID *uuid.UUID
+	var cursorSortOrder *int32
+	var cursorCreatedAt *time.Time
+	var cursorID *uuid.UUID
+
+	if page.Cursor != "" {
+		cursorProductID = &cursor.ProductID
+		cursorSortOrder = &cursor.SortOrder
+		cursorCreatedAt = &cursor.CreatedAt
+		cursorID = &cursor.ID
+	}
+
+	images, err := s.repository.List(
+		ctx,
+		repository.ListProductImagesParams{
+			CursorProductID: cursorProductID,
+			CursorSortOrder: cursorSortOrder,
+			CursorCreatedAt: cursorCreatedAt,
+			CursorID:        cursorID,
+			ProductID:       input.ProductID,
+			VariantID:       input.VariantID,
+			PageSize:        int32(page.Limit + 1),
+		},
+	)
+	if err != nil {
+		return Page[domain.ProductImage]{},
+			mapRepositoryError(
+				"list product images",
+				err,
+			)
+	}
+
+	images, hasMore := trimPage(
+		images,
+		page.Limit,
+	)
+
+	var nextCursor *string
+	if hasMore && len(images) > 0 {
+		last := images[len(images)-1]
+		encoded, err := pagination.Encode(
+			productImageCursor{
+				ProductID: last.ProductID,
+				SortOrder: last.SortOrder,
+				CreatedAt: last.CreatedAt,
+				ID:        last.ID,
+			},
+		)
+		if err != nil {
+			return Page[domain.ProductImage]{},
+				fmt.Errorf(
+					"encode product image cursor: %w",
+					err,
+				)
+		}
+		nextCursor = &encoded
+	}
+
+	return Page[domain.ProductImage]{
+		Items:      images,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (s *ProductImageService) ListByProductID(
 	ctx context.Context,
 	productID uuid.UUID,
-) ([]domain.ProductImage, error) {
+	page PageInput,
+) (Page[domain.ProductImage], error) {
 	if productID == uuid.Nil {
-		return nil, fmt.Errorf(
+		return Page[domain.ProductImage]{}, fmt.Errorf(
 			"product id is required: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	images, err := s.repository.ListByProductID(
+	return s.List(
 		ctx,
-		productID,
+		ListProductImagesInput{
+			Page:      page,
+			ProductID: &productID,
+		},
 	)
-	if err != nil {
-		return nil, mapRepositoryError(
-			"list product images by product",
-			err,
-		)
-	}
-
-	return images, nil
 }
 
 func (s *ProductImageService) ListByVariantID(
 	ctx context.Context,
 	variantID uuid.UUID,
-) ([]domain.ProductImage, error) {
+	page PageInput,
+) (Page[domain.ProductImage], error) {
 	if variantID == uuid.Nil {
-		return nil, fmt.Errorf(
+		return Page[domain.ProductImage]{}, fmt.Errorf(
 			"variant id is required: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	images, err := s.repository.ListByVariantID(
+	return s.List(
 		ctx,
-		variantID,
+		ListProductImagesInput{
+			Page:      page,
+			VariantID: &variantID,
+		},
 	)
-	if err != nil {
-		return nil, mapRepositoryError(
-			"list product images by variant",
-			err,
-		)
-	}
-
-	return images, nil
 }
 
 func (s *ProductImageService) Update(

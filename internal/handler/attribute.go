@@ -161,8 +161,10 @@ func (h *AttributeHandler) List(
 		)
 	}
 
-	c.JSON(
-		http.StatusOK,
+	writeReferenceJSON(
+		c,
+		h.log,
+		"list attributes",
 		response,
 	)
 }

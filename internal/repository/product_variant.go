@@ -22,6 +22,16 @@ type UpdateProductVariantParams struct {
 	DefaultSellingPrice *string
 }
 
+type ListProductVariantsParams struct {
+	CursorProductID *uuid.UUID
+	CursorSKU       *string
+	CursorID        *uuid.UUID
+	ProductID       *uuid.UUID
+	UnitID          *uuid.UUID
+	IsActive        *bool
+	PageSize        int32
+}
+
 type ProductVariantRepository interface {
 	Create(
 		context.Context,
@@ -41,11 +51,12 @@ type ProductVariantRepository interface {
 
 	List(
 		context.Context,
+		ListProductVariantsParams,
 	) ([]domain.ProductVariant, error)
 
-	ListByProductID(
+	ListByIDs(
 		context.Context,
-		uuid.UUID,
+		[]uuid.UUID,
 	) ([]domain.ProductVariant, error)
 
 	Update(

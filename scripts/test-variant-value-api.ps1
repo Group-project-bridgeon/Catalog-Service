@@ -120,12 +120,21 @@ $values = Invoke-RestMethod `
     -Method Get `
     -Uri "$variantBaseUrl/$($variant.id)/values"
 
-$found = $values | Where-Object {
+$found = $values.items | Where-Object {
     $_.attribute_id -eq $attribute.id
 }
 
 if (-not $found) {
     throw "Variant value not found in list"
+}
+
+# Test regular endpoint with filter
+$regularValues = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$variantValueBaseUrl`?variant_id=$($variant.id)"
+
+if (-not ($regularValues.items | Where-Object { $_.attribute_id -eq $attribute.id })) {
+    throw "Regular variant-values endpoint filter failed"
 }
 
 Write-Host "PASS - Variant value found in list"

@@ -19,6 +19,13 @@ type UpdateVariantValueParams struct {
 	AttributeValueID uuid.UUID
 }
 
+type ListVariantValuesParams struct {
+	CursorVariantID   *uuid.UUID
+	CursorAttributeID *uuid.UUID
+	VariantID         *uuid.UUID
+	PageSize          int32
+}
+
 type VariantValueRepository interface {
 	Create(
 		context.Context,
@@ -33,11 +40,7 @@ type VariantValueRepository interface {
 
 	List(
 		context.Context,
-	) ([]domain.VariantValue, error)
-
-	ListByVariantID(
-		context.Context,
-		uuid.UUID,
+		ListVariantValuesParams,
 	) ([]domain.VariantValue, error)
 
 	Update(

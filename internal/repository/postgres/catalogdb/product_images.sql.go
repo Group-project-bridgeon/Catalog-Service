@@ -28,7 +28,7 @@ type CreateProductImageParams struct {
 	ProductID pgtype.UUID
 	VariantID pgtype.UUID
 	ImageUrl  string
-	SortOrder pgtype.Int4
+	SortOrder int32
 }
 
 func (q *Queries) CreateProductImage(ctx context.Context, arg CreateProductImageParams) (CatalogProductImage, error) {
@@ -74,89 +74,57 @@ func (q *Queries) GetProductImageByID(ctx context.Context, id pgtype.UUID) (Cata
 const listProductImages = `-- name: ListProductImages :many
 SELECT id, product_id, variant_id, image_url, sort_order, created_at
 FROM catalog_product_images
+WHERE
+    (
+        $1::uuid IS NULL
+        OR (
+            product_id,
+            sort_order,
+            created_at,
+            id
+        ) > (
+            $1::uuid,
+            $2::int,
+            $3::timestamptz,
+            $4::uuid
+        )
+    )
+    AND (
+        $5::uuid IS NULL
+        OR product_id = $5::uuid
+    )
+    AND (
+        $6::uuid IS NULL
+        OR variant_id = $6::uuid
+    )
 ORDER BY
     product_id,
-    COALESCE(sort_order, 0),
+    sort_order,
     created_at,
     id
+LIMIT $7::int
 `
 
-func (q *Queries) ListProductImages(ctx context.Context) ([]CatalogProductImage, error) {
-	rows, err := q.db.Query(ctx, listProductImages)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CatalogProductImage
-	for rows.Next() {
-		var i CatalogProductImage
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProductID,
-			&i.VariantID,
-			&i.ImageUrl,
-			&i.SortOrder,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ListProductImagesParams struct {
+	CursorProductID pgtype.UUID
+	CursorSortOrder pgtype.Int4
+	CursorCreatedAt pgtype.Timestamptz
+	CursorID        pgtype.UUID
+	ProductID       pgtype.UUID
+	VariantID       pgtype.UUID
+	PageSize        int32
 }
 
-const listProductImagesByProductID = `-- name: ListProductImagesByProductID :many
-SELECT id, product_id, variant_id, image_url, sort_order, created_at
-FROM catalog_product_images
-WHERE product_id = $1
-ORDER BY
-    COALESCE(sort_order, 0),
-    created_at,
-    id
-`
-
-func (q *Queries) ListProductImagesByProductID(ctx context.Context, productID pgtype.UUID) ([]CatalogProductImage, error) {
-	rows, err := q.db.Query(ctx, listProductImagesByProductID, productID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CatalogProductImage
-	for rows.Next() {
-		var i CatalogProductImage
-		if err := rows.Scan(
-			&i.ID,
-			&i.ProductID,
-			&i.VariantID,
-			&i.ImageUrl,
-			&i.SortOrder,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductImagesByVariantID = `-- name: ListProductImagesByVariantID :many
-SELECT id, product_id, variant_id, image_url, sort_order, created_at
-FROM catalog_product_images
-WHERE variant_id = $1
-ORDER BY
-    COALESCE(sort_order, 0),
-    created_at,
-    id
-`
-
-func (q *Queries) ListProductImagesByVariantID(ctx context.Context, variantID pgtype.UUID) ([]CatalogProductImage, error) {
-	rows, err := q.db.Query(ctx, listProductImagesByVariantID, variantID)
+func (q *Queries) ListProductImages(ctx context.Context, arg ListProductImagesParams) ([]CatalogProductImage, error) {
+	rows, err := q.db.Query(ctx, listProductImages,
+		arg.CursorProductID,
+		arg.CursorSortOrder,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.ProductID,
+		arg.VariantID,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +185,7 @@ type UpdateProductImageParams struct {
 	ID        pgtype.UUID
 	VariantID pgtype.UUID
 	ImageUrl  string
-	SortOrder pgtype.Int4
+	SortOrder int32
 }
 
 func (q *Queries) UpdateProductImage(ctx context.Context, arg UpdateProductImageParams) (CatalogProductImage, error) {

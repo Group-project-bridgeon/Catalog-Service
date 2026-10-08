@@ -104,21 +104,93 @@ if ($fetched.product_code -ne $productCode) {
 Write-Host "PASS - Product fetched"
 
 
-Write-Host "3. LIST PRODUCTS"
+Write-Host "3. LIST PRODUCTS WITH PAGINATION AND FILTERS"
 
-$products = Invoke-RestMethod `
+$productsResponse = Invoke-RestMethod `
     -Method Get `
     -Uri $productBaseUrl
 
-$found = $products | Where-Object {
+$found = $productsResponse.items | Where-Object {
     $_.id -eq $id
 }
 
 if (-not $found) {
-    throw "List failed: created product not found"
+    throw "List failed: created product not found in default items"
 }
 
-Write-Host "PASS - Product found in list"
+# Test category_id filter
+$filteredByCategory = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$productBaseUrl`?category_id=$categoryId"
+
+if (-not ($filteredByCategory.items | Where-Object { $_.id -eq $id })) {
+    throw "Filter by category_id failed"
+}
+
+# Test brand_id filter
+$filteredByBrand = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$productBaseUrl`?brand_id=$brandId"
+
+if (-not ($filteredByBrand.items | Where-Object { $_.id -eq $id })) {
+    throw "Filter by brand_id failed"
+}
+
+# Test is_active filter
+$filteredByActive = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$productBaseUrl`?is_active=true"
+
+if (-not ($filteredByActive.items | Where-Object { $_.id -eq $id })) {
+    throw "Filter by is_active=true failed"
+}
+
+# Test limit 100 accepted
+$limit100 = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$productBaseUrl`?limit=100"
+
+if ($null -eq $limit100.items) {
+    throw "Limit 100 test failed"
+}
+
+# Test limit 101 rejected with 400
+try {
+    Invoke-RestMethod `
+        -Method Get `
+        -Uri "$productBaseUrl`?limit=101"
+    throw "Expected limit 101 to fail with 400"
+} catch {
+    if ($_.Exception.Response.StatusCode.value__ -ne 400) {
+        throw "Expected 400 for limit 101, got $($_.Exception.Message)"
+    }
+}
+
+# Test limit 0 rejected with 400
+try {
+    Invoke-RestMethod `
+        -Method Get `
+        -Uri "$productBaseUrl`?limit=0"
+    throw "Expected limit 0 to fail with 400"
+} catch {
+    if ($_.Exception.Response.StatusCode.value__ -ne 400) {
+        throw "Expected 400 for limit 0, got $($_.Exception.Message)"
+    }
+}
+
+# Test malformed cursor rejected with 400
+try {
+    Invoke-RestMethod `
+        -Method Get `
+        -Uri "$productBaseUrl`?cursor=invalidcursor!!!"
+    throw "Expected malformed cursor to fail with 400"
+} catch {
+    if ($_.Exception.Response.StatusCode.value__ -ne 400) {
+        throw "Expected 400 for malformed cursor, got $($_.Exception.Message)"
+    }
+}
+
+Write-Host "PASS - Product list, filters, and pagination validated"
 
 
 Write-Host "4. UPDATE PRODUCT"

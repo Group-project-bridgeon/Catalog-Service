@@ -50,7 +50,7 @@ func (s *UnitService) Create(
 		return domain.Unit{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Unit{}, fmt.Errorf(
 			"generate unit id: %w",

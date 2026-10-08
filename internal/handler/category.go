@@ -203,8 +203,10 @@ func (h *CategoryHandler) List(c *gin.Context) {
 		)
 	}
 
-	c.JSON(
-		http.StatusOK,
+	writeReferenceJSON(
+		c,
+		h.log,
+		"list categories",
 		response,
 	)
 }

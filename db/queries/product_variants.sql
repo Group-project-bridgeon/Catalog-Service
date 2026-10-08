@@ -24,13 +24,45 @@ WHERE product_id = $1
 -- name: ListProductVariants :many
 SELECT *
 FROM catalog_product_variants
-ORDER BY product_id, sku;
+WHERE
+    (
+        sqlc.narg(cursor_product_id)::uuid IS NULL
+        OR (
+            product_id,
+            sku,
+            id
+        ) > (
+            sqlc.narg(cursor_product_id)::uuid,
+            sqlc.narg(cursor_sku)::text,
+            sqlc.narg(cursor_id)::uuid
+        )
+    )
+    AND (
+        sqlc.narg(product_id)::uuid IS NULL
+        OR product_id = sqlc.narg(product_id)::uuid
+    )
+    AND (
+        sqlc.narg(unit_id)::uuid IS NULL
+        OR unit_id = sqlc.narg(unit_id)::uuid
+    )
+    AND (
+        sqlc.narg(is_active)::boolean IS NULL
+        OR is_active = sqlc.narg(is_active)::boolean
+    )
+ORDER BY
+    product_id,
+    sku,
+    id
+LIMIT sqlc.arg(page_size)::int;
 
--- name: ListProductVariantsByProductID :many
+-- name: ListProductVariantsByIDs :many
 SELECT *
 FROM catalog_product_variants
-WHERE product_id = $1
-ORDER BY sku;
+WHERE id = ANY(sqlc.arg(ids)::uuid[])
+ORDER BY
+    product_id,
+    sku,
+    id;
 
 -- name: UpdateProductVariant :one
 UPDATE catalog_product_variants

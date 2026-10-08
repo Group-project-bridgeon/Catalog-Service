@@ -52,7 +52,7 @@ func (s *AttributeValueService) Create(
 		return domain.AttributeValue{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.AttributeValue{}, fmt.Errorf(
 			"generate attribute value id: %w",

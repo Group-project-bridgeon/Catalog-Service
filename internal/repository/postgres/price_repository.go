@@ -29,16 +29,7 @@ type priceQueries interface {
 
 	ListPrices(
 		context.Context,
-	) ([]catalogdb.CatalogPrice, error)
-
-	ListPricesByPriceListID(
-		context.Context,
-		pgtype.UUID,
-	) ([]catalogdb.CatalogPrice, error)
-
-	ListPricesByVariantID(
-		context.Context,
-		pgtype.UUID,
+		catalogdb.ListPricesParams,
 	) ([]catalogdb.CatalogPrice, error)
 
 	UpdatePrice(
@@ -137,47 +128,29 @@ func (r *PriceRepository) GetByPriceListAndVariant(
 
 func (r *PriceRepository) List(
 	ctx context.Context,
+	params repository.ListPricesParams,
 ) ([]domain.Price, error) {
-	rows, err := r.queries.ListPrices(ctx)
+	rows, err := r.queries.ListPrices(
+		ctx,
+		catalogdb.ListPricesParams{
+			CursorPriceListID: nullableUUIDToPG(
+				params.CursorPriceListID,
+			),
+			CursorVariantID: nullableUUIDToPG(
+				params.CursorVariantID,
+			),
+			PriceListID: nullableUUIDToPG(
+				params.PriceListID,
+			),
+			VariantID: nullableUUIDToPG(
+				params.VariantID,
+			),
+			PageSize: params.PageSize,
+		},
+	)
 	if err != nil {
 		return nil, mapDBError(
 			"list prices",
-			err,
-		)
-	}
-
-	return pricesToDomain(rows)
-}
-
-func (r *PriceRepository) ListByPriceListID(
-	ctx context.Context,
-	priceListID uuid.UUID,
-) ([]domain.Price, error) {
-	rows, err := r.queries.ListPricesByPriceListID(
-		ctx,
-		uuidToPG(priceListID),
-	)
-	if err != nil {
-		return nil, mapDBError(
-			"list prices by price list",
-			err,
-		)
-	}
-
-	return pricesToDomain(rows)
-}
-
-func (r *PriceRepository) ListByVariantID(
-	ctx context.Context,
-	variantID uuid.UUID,
-) ([]domain.Price, error) {
-	rows, err := r.queries.ListPricesByVariantID(
-		ctx,
-		uuidToPG(variantID),
-	)
-	if err != nil {
-		return nil, mapDBError(
-			"list prices by variant",
 			err,
 		)
 	}

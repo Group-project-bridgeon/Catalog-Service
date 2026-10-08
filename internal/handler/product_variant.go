@@ -25,11 +25,18 @@ type productVariantService interface {
 
 	List(
 		context.Context,
-	) ([]domain.ProductVariant, error)
+		service.ListProductVariantsInput,
+	) (service.Page[domain.ProductVariant], error)
 
 	ListByProductID(
 		context.Context,
 		uuid.UUID,
+		service.PageInput,
+	) (service.Page[domain.ProductVariant], error)
+
+	ListByIDs(
+		context.Context,
+		[]uuid.UUID,
 	) ([]domain.ProductVariant, error)
 
 	Update(
@@ -85,6 +92,11 @@ type productVariantResponse struct {
 	IsActive            bool      `json:"is_active"`
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
+}
+
+type productVariantPageResponse struct {
+	Items      []productVariantResponse `json:"items"`
+	NextCursor *string                  `json:"next_cursor"`
 }
 
 func (h *ProductVariantHandler) Create(c *gin.Context) {
@@ -154,8 +166,83 @@ func (h *ProductVariantHandler) GetByID(c *gin.Context) {
 }
 
 func (h *ProductVariantHandler) List(c *gin.Context) {
-	variants, err := h.service.List(
+	if idsRaw, exists := c.GetQuery("ids"); exists {
+		ids, err := parseUUIDList(
+			idsRaw,
+			100,
+		)
+		if err != nil {
+			writeInvalidQuery(c, err)
+			return
+		}
+
+		variants, err := h.service.ListByIDs(
+			c.Request.Context(),
+			ids,
+		)
+		if err != nil {
+			writeServiceError(
+				c,
+				h.log,
+				"batch list product variants",
+				err,
+			)
+			return
+		}
+
+		c.JSON(
+			http.StatusOK,
+			gin.H{
+				"items": toProductVariantResponses(
+					variants,
+				),
+			},
+		)
+
+		return
+	}
+
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	productID, err := parseOptionalUUIDQuery(
+		c,
+		"product_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	unitID, err := parseOptionalUUIDQuery(
+		c,
+		"unit_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	isActive, err := parseOptionalBoolQuery(
+		c,
+		"is_active",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.List(
 		c.Request.Context(),
+		service.ListProductVariantsInput{
+			Page:      pageInput,
+			ProductID: productID,
+			UnitID:    unitID,
+			IsActive:  isActive,
+		},
 	)
 	if err != nil {
 		writeServiceError(
@@ -169,7 +256,10 @@ func (h *ProductVariantHandler) List(c *gin.Context) {
 
 	c.JSON(
 		http.StatusOK,
-		toProductVariantResponses(variants),
+		productVariantPageResponse{
+			Items:      toProductVariantResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -183,9 +273,16 @@ func (h *ProductVariantHandler) ListByProductID(c *gin.Context) {
 		return
 	}
 
-	variants, err := h.service.ListByProductID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByProductID(
 		c.Request.Context(),
 		productID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -199,7 +296,10 @@ func (h *ProductVariantHandler) ListByProductID(c *gin.Context) {
 
 	c.JSON(
 		http.StatusOK,
-		toProductVariantResponses(variants),
+		productVariantPageResponse{
+			Items:      toProductVariantResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 

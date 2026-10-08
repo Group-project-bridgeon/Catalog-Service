@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/pagination"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -17,6 +18,19 @@ const maxProductVariantSKULength = 100
 var productVariantPricePattern = regexp.MustCompile(
 	`^[0-9]{1,12}(\.[0-9]{1,2})?$`,
 )
+
+type ListProductVariantsInput struct {
+	Page      PageInput
+	ProductID *uuid.UUID
+	UnitID    *uuid.UUID
+	IsActive  *bool
+}
+
+type productVariantCursor struct {
+	ProductID uuid.UUID `json:"product_id"`
+	SKU       string    `json:"sku"`
+	ID        uuid.UUID `json:"id"`
+}
 
 type CreateProductVariantInput struct {
 	ProductID           uuid.UUID
@@ -72,7 +86,7 @@ func (s *ProductVariantService) Create(
 		return domain.ProductVariant{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.ProductVariant{}, fmt.Errorf(
 			"generate product variant id: %w",
@@ -153,36 +167,147 @@ func (s *ProductVariantService) GetByProductAndSKU(
 
 func (s *ProductVariantService) List(
 	ctx context.Context,
-) ([]domain.ProductVariant, error) {
-	variants, err := s.repository.List(ctx)
+	input ListProductVariantsInput,
+) (Page[domain.ProductVariant], error) {
+	page, err := normalizePageInput(input.Page)
 	if err != nil {
-		return nil, mapRepositoryError(
-			"list product variants",
-			err,
+		return Page[domain.ProductVariant]{}, fmt.Errorf(
+			"invalid pagination: %w",
+			ErrInvalidArgument,
 		)
 	}
 
-	return variants, nil
+	var cursor productVariantCursor
+
+	if page.Cursor != "" {
+		if err := pagination.Decode(
+			page.Cursor,
+			&cursor,
+		); err != nil {
+			return Page[domain.ProductVariant]{}, fmt.Errorf(
+				"invalid cursor: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	var cursorProductID *uuid.UUID
+	var cursorSKU *string
+	var cursorID *uuid.UUID
+
+	if page.Cursor != "" {
+		cursorProductID = &cursor.ProductID
+		cursorSKU = &cursor.SKU
+		cursorID = &cursor.ID
+	}
+
+	variants, err := s.repository.List(
+		ctx,
+		repository.ListProductVariantsParams{
+			CursorProductID: cursorProductID,
+			CursorSKU:       cursorSKU,
+			CursorID:        cursorID,
+			ProductID:       input.ProductID,
+			UnitID:          input.UnitID,
+			IsActive:        input.IsActive,
+			PageSize:        int32(page.Limit + 1),
+		},
+	)
+	if err != nil {
+		return Page[domain.ProductVariant]{},
+			mapRepositoryError(
+				"list product variants",
+				err,
+			)
+	}
+
+	variants, hasMore := trimPage(
+		variants,
+		page.Limit,
+	)
+
+	var nextCursor *string
+
+	if hasMore && len(variants) > 0 {
+		last := variants[len(variants)-1]
+
+		encoded, err := pagination.Encode(
+			productVariantCursor{
+				ProductID: last.ProductID,
+				SKU:       last.SKU,
+				ID:        last.ID,
+			},
+		)
+		if err != nil {
+			return Page[domain.ProductVariant]{},
+				fmt.Errorf(
+					"encode product variant cursor: %w",
+					err,
+				)
+		}
+
+		nextCursor = &encoded
+	}
+
+	return Page[domain.ProductVariant]{
+		Items:      variants,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (s *ProductVariantService) ListByProductID(
 	ctx context.Context,
 	productID uuid.UUID,
-) ([]domain.ProductVariant, error) {
+	page PageInput,
+) (Page[domain.ProductVariant], error) {
 	if productID == uuid.Nil {
+		return Page[domain.ProductVariant]{},
+			fmt.Errorf(
+				"product id is required: %w",
+				ErrInvalidArgument,
+			)
+	}
+
+	return s.List(
+		ctx,
+		ListProductVariantsInput{
+			Page:      page,
+			ProductID: &productID,
+		},
+	)
+}
+
+func (s *ProductVariantService) ListByIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]domain.ProductVariant, error) {
+	if len(ids) == 0 {
+		return []domain.ProductVariant{}, nil
+	}
+
+	if len(ids) > 100 {
 		return nil, fmt.Errorf(
-			"product id is required: %w",
+			"maximum 100 variant ids are allowed: %w",
 			ErrInvalidArgument,
 		)
 	}
 
-	variants, err := s.repository.ListByProductID(
+	for _, id := range ids {
+		if id == uuid.Nil {
+			return nil, fmt.Errorf(
+				"invalid variant id: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	variants, err := s.repository.ListByIDs(
 		ctx,
-		productID,
+		ids,
 	)
 	if err != nil {
 		return nil, mapRepositoryError(
-			"list product variants by product",
+			"list product variants by ids",
 			err,
 		)
 	}

@@ -55,7 +55,7 @@ func (s *PriceListService) Create(
 		return domain.PriceList{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.PriceList{}, fmt.Errorf(
 			"generate price list id: %w",

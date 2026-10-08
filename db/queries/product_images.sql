@@ -17,29 +17,35 @@ WHERE id = $1;
 -- name: ListProductImages :many
 SELECT *
 FROM catalog_product_images
+WHERE
+    (
+        sqlc.narg(cursor_product_id)::uuid IS NULL
+        OR (
+            product_id,
+            sort_order,
+            created_at,
+            id
+        ) > (
+            sqlc.narg(cursor_product_id)::uuid,
+            sqlc.narg(cursor_sort_order)::int,
+            sqlc.narg(cursor_created_at)::timestamptz,
+            sqlc.narg(cursor_id)::uuid
+        )
+    )
+    AND (
+        sqlc.narg(product_id)::uuid IS NULL
+        OR product_id = sqlc.narg(product_id)::uuid
+    )
+    AND (
+        sqlc.narg(variant_id)::uuid IS NULL
+        OR variant_id = sqlc.narg(variant_id)::uuid
+    )
 ORDER BY
     product_id,
-    COALESCE(sort_order, 0),
+    sort_order,
     created_at,
-    id;
-
--- name: ListProductImagesByProductID :many
-SELECT *
-FROM catalog_product_images
-WHERE product_id = $1
-ORDER BY
-    COALESCE(sort_order, 0),
-    created_at,
-    id;
-
--- name: ListProductImagesByVariantID :many
-SELECT *
-FROM catalog_product_images
-WHERE variant_id = $1
-ORDER BY
-    COALESCE(sort_order, 0),
-    created_at,
-    id;
+    id
+LIMIT sqlc.arg(page_size)::int;
 
 -- name: UpdateProductImage :one
 UPDATE catalog_product_images

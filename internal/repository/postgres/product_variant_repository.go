@@ -29,11 +29,12 @@ type productVariantQueries interface {
 
 	ListProductVariants(
 		context.Context,
+		catalogdb.ListProductVariantsParams,
 	) ([]catalogdb.CatalogProductVariant, error)
 
-	ListProductVariantsByProductID(
+	ListProductVariantsByIDs(
 		context.Context,
-		pgtype.UUID,
+		[]pgtype.UUID,
 	) ([]catalogdb.CatalogProductVariant, error)
 
 	UpdateProductVariant(
@@ -138,8 +139,32 @@ func (r *ProductVariantRepository) GetByProductAndSKU(
 
 func (r *ProductVariantRepository) List(
 	ctx context.Context,
+	params repository.ListProductVariantsParams,
 ) ([]domain.ProductVariant, error) {
-	rows, err := r.queries.ListProductVariants(ctx)
+	rows, err := r.queries.ListProductVariants(
+		ctx,
+		catalogdb.ListProductVariantsParams{
+			CursorProductID: nullableUUIDToPG(
+				params.CursorProductID,
+			),
+			CursorSku: stringPtrToPGText(
+				params.CursorSKU,
+			),
+			CursorID: nullableUUIDToPG(
+				params.CursorID,
+			),
+			ProductID: nullableUUIDToPG(
+				params.ProductID,
+			),
+			UnitID: nullableUUIDToPG(
+				params.UnitID,
+			),
+			IsActive: boolPtrToPGBool(
+				params.IsActive,
+			),
+			PageSize: params.PageSize,
+		},
+	)
 	if err != nil {
 		return nil, mapDBError(
 			"list product variants",
@@ -168,17 +193,17 @@ func (r *ProductVariantRepository) List(
 	return result, nil
 }
 
-func (r *ProductVariantRepository) ListByProductID(
+func (r *ProductVariantRepository) ListByIDs(
 	ctx context.Context,
-	productID uuid.UUID,
+	ids []uuid.UUID,
 ) ([]domain.ProductVariant, error) {
-	rows, err := r.queries.ListProductVariantsByProductID(
+	rows, err := r.queries.ListProductVariantsByIDs(
 		ctx,
-		uuidToPG(productID),
+		uuidSliceToPG(ids),
 	)
 	if err != nil {
 		return nil, mapDBError(
-			"list product variants by product",
+			"list product variants by ids",
 			err,
 		)
 	}
@@ -193,7 +218,7 @@ func (r *ProductVariantRepository) ListByProductID(
 		variant, err := productVariantToDomain(row)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"list product variants by product: %w",
+				"list product variants by ids: %w",
 				err,
 			)
 		}

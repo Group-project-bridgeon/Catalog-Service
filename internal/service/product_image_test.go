@@ -23,16 +23,7 @@ type fakeProductImageRepository struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.ProductImage, error)
-
-	listByProductIDFn func(
-		context.Context,
-		uuid.UUID,
-	) ([]domain.ProductImage, error)
-
-	listByVariantIDFn func(
-		context.Context,
-		uuid.UUID,
+		repository.ListProductImagesParams,
 	) ([]domain.ProductImage, error)
 
 	updateFn func(
@@ -71,34 +62,13 @@ func (f *fakeProductImageRepository) GetByID(
 
 func (f *fakeProductImageRepository) List(
 	ctx context.Context,
+	params repository.ListProductImagesParams,
 ) ([]domain.ProductImage, error) {
 	if f.listFn == nil {
 		return nil, nil
 	}
 
-	return f.listFn(ctx)
-}
-
-func (f *fakeProductImageRepository) ListByProductID(
-	ctx context.Context,
-	id uuid.UUID,
-) ([]domain.ProductImage, error) {
-	if f.listByProductIDFn == nil {
-		return nil, nil
-	}
-
-	return f.listByProductIDFn(ctx, id)
-}
-
-func (f *fakeProductImageRepository) ListByVariantID(
-	ctx context.Context,
-	id uuid.UUID,
-) ([]domain.ProductImage, error) {
-	if f.listByVariantIDFn == nil {
-		return nil, nil
-	}
-
-	return f.listByVariantIDFn(ctx, id)
+	return f.listFn(ctx, params)
 }
 
 func (f *fakeProductImageRepository) Update(
@@ -354,5 +324,51 @@ func TestProductImageServiceUpdate(
 
 	if image.SortOrder != 5 {
 		t.Fatal("unexpected sort order")
+	}
+}
+
+func TestProductImageServiceList(t *testing.T) {
+	productID := uuid.New()
+	variantID := uuid.New()
+
+	repo := &fakeProductImageRepository{
+		listFn: func(
+			_ context.Context,
+			params repository.ListProductImagesParams,
+		) ([]domain.ProductImage, error) {
+			if params.PageSize != 3 {
+				t.Fatalf("expected PageSize 3, got %d", params.PageSize)
+			}
+			if params.ProductID == nil || *params.ProductID != productID {
+				t.Fatalf("expected ProductID %v", productID)
+			}
+			if params.VariantID == nil || *params.VariantID != variantID {
+				t.Fatalf("expected VariantID %v", variantID)
+			}
+
+			return []domain.ProductImage{
+				{ID: uuid.New(), ProductID: productID, SortOrder: 1},
+				{ID: uuid.New(), ProductID: productID, SortOrder: 2},
+				{ID: uuid.New(), ProductID: productID, SortOrder: 3}, // extra row
+			}, nil
+		},
+	}
+
+	s := NewProductImageService(repo)
+
+	page, err := s.List(context.Background(), ListProductImagesInput{
+		Page:      PageInput{Limit: 2},
+		ProductID: &productID,
+		VariantID: &variantID,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(page.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(page.Items))
+	}
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("expected next cursor")
 	}
 }

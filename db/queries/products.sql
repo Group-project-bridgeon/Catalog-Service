@@ -24,7 +24,33 @@ WHERE product_code = $1;
 -- name: ListProducts :many
 SELECT *
 FROM catalog_products
-ORDER BY name;
+WHERE
+    (
+        sqlc.narg(cursor_name)::text IS NULL
+        OR (
+            name,
+            id
+        ) > (
+            sqlc.narg(cursor_name)::text,
+            sqlc.narg(cursor_id)::uuid
+        )
+    )
+    AND (
+        sqlc.narg(category_id)::uuid IS NULL
+        OR category_id = sqlc.narg(category_id)::uuid
+    )
+    AND (
+        sqlc.narg(brand_id)::uuid IS NULL
+        OR brand_id = sqlc.narg(brand_id)::uuid
+    )
+    AND (
+        sqlc.narg(is_active)::boolean IS NULL
+        OR is_active = sqlc.narg(is_active)::boolean
+    )
+ORDER BY
+    name,
+    id
+LIMIT sqlc.arg(page_size)::int;
 
 -- name: UpdateProduct :one
 UPDATE catalog_products

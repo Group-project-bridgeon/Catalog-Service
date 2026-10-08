@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -203,4 +204,62 @@ func pgInt4ToInt32(
 	}
 
 	return value.Int32
+}
+
+func boolPtrToPGBool(
+	value *bool,
+) pgtype.Bool {
+	if value == nil {
+		return pgtype.Bool{}
+	}
+
+	return pgtype.Bool{
+		Bool:  *value,
+		Valid: true,
+	}
+}
+
+func int32PtrToPGInt4(
+	value *int32,
+) pgtype.Int4 {
+	if value == nil {
+		return pgtype.Int4{}
+	}
+
+	return pgtype.Int4{
+		Int32: *value,
+		Valid: true,
+	}
+}
+
+func timePtrToPGTimestamptz(
+	value *time.Time,
+) pgtype.Timestamptz {
+	if value == nil {
+		return pgtype.Timestamptz{}
+	}
+
+	return pgtype.Timestamptz{
+		Time:  *value,
+		Valid: true,
+	}
+}
+
+func uuidSliceToPG(
+	values []uuid.UUID,
+) []pgtype.UUID {
+	result := make(
+		[]pgtype.UUID,
+		0,
+		len(values),
+	)
+
+	for _, value := range values {
+		result = append(
+			result,
+			uuidToPG(value),
+		)
+	}
+
+	return result
 }

@@ -17,7 +17,7 @@ import (
 type fakeProductService struct {
 	createFn    func(context.Context, service.CreateProductInput) (domain.Product, error)
 	getByIDFn   func(context.Context, uuid.UUID) (domain.Product, error)
-	listFn      func(context.Context) ([]domain.Product, error)
+	listFn      func(context.Context, service.ListProductsInput) (service.Page[domain.Product], error)
 	updateFn    func(context.Context, uuid.UUID, service.UpdateProductInput) (domain.Product, error)
 	setActiveFn func(context.Context, uuid.UUID, bool) (domain.Product, error)
 }
@@ -46,12 +46,13 @@ func (f *fakeProductService) GetByID(
 
 func (f *fakeProductService) List(
 	ctx context.Context,
-) ([]domain.Product, error) {
+	input service.ListProductsInput,
+) (service.Page[domain.Product], error) {
 	if f.listFn == nil {
-		return nil, nil
+		return service.Page[domain.Product]{}, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, input)
 }
 
 func (f *fakeProductService) Update(
@@ -391,5 +392,45 @@ func TestProductHandlerCreateInvalidReference(t *testing.T) {
 			http.StatusUnprocessableEntity,
 			response.Code,
 		)
+	}
+}
+
+func TestProductHandlerList(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	fake := &fakeProductService{
+		listFn: func(
+			_ context.Context,
+			input service.ListProductsInput,
+		) (service.Page[domain.Product], error) {
+			if input.Page.Limit != 10 {
+				t.Fatalf("expected limit 10, got %d", input.Page.Limit)
+			}
+
+			next := "encoded-cursor"
+			return service.Page[domain.Product]{
+				Items: []domain.Product{
+					{
+						ID:          uuid.New(),
+						Name:        "Shirt",
+						ProductCode: "P001",
+						IsActive:    true,
+					},
+				},
+				NextCursor: &next,
+			}, nil
+		},
+	}
+
+	h := NewProductHandler(fake, zerolog.Nop())
+	r := gin.New()
+	r.GET("/products", h.List)
+
+	req := httptest.NewRequest(http.MethodGet, "/products?limit=10", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
 }

@@ -97,79 +97,47 @@ func (q *Queries) GetPriceByPriceListAndVariant(ctx context.Context, arg GetPric
 const listPrices = `-- name: ListPrices :many
 SELECT id, price_list_id, variant_id, unit_price, created_at, updated_at
 FROM catalog_prices
-ORDER BY price_list_id, variant_id
+WHERE
+    (
+        $1::uuid IS NULL
+        OR (
+            price_list_id,
+            variant_id
+        ) > (
+            $1::uuid,
+            $2::uuid
+        )
+    )
+    AND (
+        $3::uuid IS NULL
+        OR price_list_id = $3::uuid
+    )
+    AND (
+        $4::uuid IS NULL
+        OR variant_id = $4::uuid
+    )
+ORDER BY
+    price_list_id,
+    variant_id
+LIMIT $5::int
 `
 
-func (q *Queries) ListPrices(ctx context.Context) ([]CatalogPrice, error) {
-	rows, err := q.db.Query(ctx, listPrices)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CatalogPrice
-	for rows.Next() {
-		var i CatalogPrice
-		if err := rows.Scan(
-			&i.ID,
-			&i.PriceListID,
-			&i.VariantID,
-			&i.UnitPrice,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+type ListPricesParams struct {
+	CursorPriceListID pgtype.UUID
+	CursorVariantID   pgtype.UUID
+	PriceListID       pgtype.UUID
+	VariantID         pgtype.UUID
+	PageSize          int32
 }
 
-const listPricesByPriceListID = `-- name: ListPricesByPriceListID :many
-SELECT id, price_list_id, variant_id, unit_price, created_at, updated_at
-FROM catalog_prices
-WHERE price_list_id = $1
-ORDER BY variant_id
-`
-
-func (q *Queries) ListPricesByPriceListID(ctx context.Context, priceListID pgtype.UUID) ([]CatalogPrice, error) {
-	rows, err := q.db.Query(ctx, listPricesByPriceListID, priceListID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []CatalogPrice
-	for rows.Next() {
-		var i CatalogPrice
-		if err := rows.Scan(
-			&i.ID,
-			&i.PriceListID,
-			&i.VariantID,
-			&i.UnitPrice,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listPricesByVariantID = `-- name: ListPricesByVariantID :many
-SELECT id, price_list_id, variant_id, unit_price, created_at, updated_at
-FROM catalog_prices
-WHERE variant_id = $1
-ORDER BY price_list_id
-`
-
-func (q *Queries) ListPricesByVariantID(ctx context.Context, variantID pgtype.UUID) ([]CatalogPrice, error) {
-	rows, err := q.db.Query(ctx, listPricesByVariantID, variantID)
+func (q *Queries) ListPrices(ctx context.Context, arg ListPricesParams) ([]CatalogPrice, error) {
+	rows, err := q.db.Query(ctx, listPrices,
+		arg.CursorPriceListID,
+		arg.CursorVariantID,
+		arg.PriceListID,
+		arg.VariantID,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}

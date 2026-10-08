@@ -104,12 +104,21 @@ $productImages = Invoke-RestMethod `
     -Method Get `
     -Uri "$productBaseUrl/$($product.id)/images"
 
-$found = $productImages | Where-Object {
+$found = $productImages.items | Where-Object {
     $_.id -eq $id
 }
 
 if (-not $found) {
     throw "Image not found under product"
+}
+
+# Also test query filter on regular endpoint
+$regularList = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$imageBaseUrl`?product_id=$($product.id)&variant_id=$($variant.id)"
+
+if (-not ($regularList.items | Where-Object { $_.id -eq $id })) {
+    throw "Regular product-images endpoint filter failed"
 }
 
 Write-Host "PASS - Product image found under product"
@@ -121,7 +130,7 @@ $variantImages = Invoke-RestMethod `
     -Method Get `
     -Uri "$variantBaseUrl/$($variant.id)/images"
 
-$found = $variantImages | Where-Object {
+$found = $variantImages.items | Where-Object {
     $_.id -eq $id
 }
 

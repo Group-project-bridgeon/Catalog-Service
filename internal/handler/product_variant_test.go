@@ -27,11 +27,18 @@ type fakeProductVariantService struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.ProductVariant, error)
+		service.ListProductVariantsInput,
+	) (service.Page[domain.ProductVariant], error)
 
 	listByProductIDFn func(
 		context.Context,
 		uuid.UUID,
+		service.PageInput,
+	) (service.Page[domain.ProductVariant], error)
+
+	listByIDsFn func(
+		context.Context,
+		[]uuid.UUID,
 	) ([]domain.ProductVariant, error)
 
 	updateFn func(
@@ -71,23 +78,36 @@ func (f *fakeProductVariantService) GetByID(
 
 func (f *fakeProductVariantService) List(
 	ctx context.Context,
-) ([]domain.ProductVariant, error) {
+	input service.ListProductVariantsInput,
+) (service.Page[domain.ProductVariant], error) {
 	if f.listFn == nil {
-		return nil, nil
+		return service.Page[domain.ProductVariant]{}, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, input)
 }
 
 func (f *fakeProductVariantService) ListByProductID(
 	ctx context.Context,
 	productID uuid.UUID,
-) ([]domain.ProductVariant, error) {
+	page service.PageInput,
+) (service.Page[domain.ProductVariant], error) {
 	if f.listByProductIDFn == nil {
+		return service.Page[domain.ProductVariant]{}, nil
+	}
+
+	return f.listByProductIDFn(ctx, productID, page)
+}
+
+func (f *fakeProductVariantService) ListByIDs(
+	ctx context.Context,
+	ids []uuid.UUID,
+) ([]domain.ProductVariant, error) {
+	if f.listByIDsFn == nil {
 		return nil, nil
 	}
 
-	return f.listByProductIDFn(ctx, productID)
+	return f.listByIDsFn(ctx, ids)
 }
 
 func (f *fakeProductVariantService) Update(
@@ -218,5 +238,71 @@ func TestProductVariantHandlerGetByID(
 			http.StatusOK,
 			response.Code,
 		)
+	}
+}
+
+func TestProductVariantHandlerList(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	fake := &fakeProductVariantService{
+		listFn: func(
+			_ context.Context,
+			input service.ListProductVariantsInput,
+		) (service.Page[domain.ProductVariant], error) {
+			if input.Page.Limit != 10 {
+				t.Fatalf("expected limit 10, got %d", input.Page.Limit)
+			}
+			return service.Page[domain.ProductVariant]{
+				Items: []domain.ProductVariant{
+					{ID: uuid.New(), SKU: "VAR-1"},
+				},
+			}, nil
+		},
+	}
+
+	h := NewProductVariantHandler(fake, zerolog.Nop())
+	r := gin.New()
+	r.GET("/product-variants", h.List)
+
+	req := httptest.NewRequest(http.MethodGet, "/product-variants?limit=10", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestProductVariantHandlerBatchList(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	id1 := uuid.New()
+	id2 := uuid.New()
+
+	fake := &fakeProductVariantService{
+		listByIDsFn: func(
+			_ context.Context,
+			ids []uuid.UUID,
+		) ([]domain.ProductVariant, error) {
+			if len(ids) != 2 {
+				t.Fatalf("expected 2 ids, got %d", len(ids))
+			}
+			return []domain.ProductVariant{
+				{ID: id1, SKU: "VAR-1"},
+				{ID: id2, SKU: "VAR-2"},
+			}, nil
+		},
+	}
+
+	h := NewProductVariantHandler(fake, zerolog.Nop())
+	r := gin.New()
+	r.GET("/product-variants", h.List)
+
+	req := httptest.NewRequest(http.MethodGet, "/product-variants?ids="+id1.String()+","+id2.String(), nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
 }

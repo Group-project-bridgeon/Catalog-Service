@@ -111,16 +111,25 @@ Write-Host "PASS - Price fetched"
 
 Write-Host "3. LIST ALL PRICES"
 
-$prices = Invoke-RestMethod `
+$pricesResponse = Invoke-RestMethod `
     -Method Get `
     -Uri $priceBaseUrl
 
-$found = $prices | Where-Object {
+$found = $pricesResponse.items | Where-Object {
     $_.id -eq $id
 }
 
 if (-not $found) {
     throw "List failed: price not found"
+}
+
+# Test query filters
+$filteredPrices = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$priceBaseUrl`?price_list_id=$($priceList.id)&variant_id=$($variant.id)"
+
+if (-not ($filteredPrices.items | Where-Object { $_.id -eq $id })) {
+    throw "Filter prices by price_list_id and variant_id failed"
 }
 
 Write-Host "PASS - Price found in list"
@@ -132,7 +141,7 @@ $priceListPrices = Invoke-RestMethod `
     -Method Get `
     -Uri "$priceListBaseUrl/$($priceList.id)/prices"
 
-$found = $priceListPrices | Where-Object {
+$found = $priceListPrices.items | Where-Object {
     $_.id -eq $id
 }
 
@@ -149,7 +158,7 @@ $variantPrices = Invoke-RestMethod `
     -Method Get `
     -Uri "$variantBaseUrl/$($variant.id)/prices"
 
-$found = $variantPrices | Where-Object {
+$found = $variantPrices.items | Where-Object {
     $_.id -eq $id
 }
 

@@ -29,16 +29,7 @@ type fakePriceRepository struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.Price, error)
-
-	listByPriceListFn func(
-		context.Context,
-		uuid.UUID,
-	) ([]domain.Price, error)
-
-	listByVariantFn func(
-		context.Context,
-		uuid.UUID,
+		repository.ListPricesParams,
 	) ([]domain.Price, error)
 
 	updateFn func(
@@ -87,34 +78,13 @@ func (f *fakePriceRepository) GetByPriceListAndVariant(
 
 func (f *fakePriceRepository) List(
 	ctx context.Context,
+	params repository.ListPricesParams,
 ) ([]domain.Price, error) {
 	if f.listFn == nil {
 		return nil, nil
 	}
 
-	return f.listFn(ctx)
-}
-
-func (f *fakePriceRepository) ListByPriceListID(
-	ctx context.Context,
-	id uuid.UUID,
-) ([]domain.Price, error) {
-	if f.listByPriceListFn == nil {
-		return nil, nil
-	}
-
-	return f.listByPriceListFn(ctx, id)
-}
-
-func (f *fakePriceRepository) ListByVariantID(
-	ctx context.Context,
-	id uuid.UUID,
-) ([]domain.Price, error) {
-	if f.listByVariantFn == nil {
-		return nil, nil
-	}
-
-	return f.listByVariantFn(ctx, id)
+	return f.listFn(ctx, params)
 }
 
 func (f *fakePriceRepository) Update(
@@ -347,11 +317,11 @@ func TestPriceServiceListByPriceList(
 	priceListID := uuid.New()
 
 	repo := &fakePriceRepository{
-		listByPriceListFn: func(
+		listFn: func(
 			_ context.Context,
-			gotID uuid.UUID,
+			params repository.ListPricesParams,
 		) ([]domain.Price, error) {
-			if gotID != priceListID {
+			if params.PriceListID == nil || *params.PriceListID != priceListID {
 				t.Fatal("unexpected price list ID")
 			}
 
@@ -368,18 +338,19 @@ func TestPriceServiceListByPriceList(
 
 	s := NewPriceService(repo)
 
-	prices, err := s.ListByPriceListID(
+	page, err := s.ListByPriceListID(
 		context.Background(),
 		priceListID,
+		PageInput{Limit: 10},
 	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(prices) != 1 {
+	if len(page.Items) != 1 {
 		t.Fatalf(
 			"expected 1 price, got %d",
-			len(prices),
+			len(page.Items),
 		)
 	}
 }

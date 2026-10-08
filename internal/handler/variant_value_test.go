@@ -28,12 +28,14 @@ type fakeVariantValueService struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.VariantValue, error)
+		service.ListVariantValuesInput,
+	) (service.Page[domain.VariantValue], error)
 
 	listByVariantFn func(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.VariantValue, error)
+		service.PageInput,
+	) (service.Page[domain.VariantValue], error)
 
 	updateFn func(
 		context.Context,
@@ -68,23 +70,25 @@ func (f *fakeVariantValueService) GetByVariantAndAttribute(
 
 func (f *fakeVariantValueService) List(
 	ctx context.Context,
-) ([]domain.VariantValue, error) {
+	input service.ListVariantValuesInput,
+) (service.Page[domain.VariantValue], error) {
 	if f.listFn == nil {
-		return nil, nil
+		return service.Page[domain.VariantValue]{}, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, input)
 }
 
 func (f *fakeVariantValueService) ListByVariantID(
 	ctx context.Context,
 	variantID uuid.UUID,
-) ([]domain.VariantValue, error) {
+	page service.PageInput,
+) (service.Page[domain.VariantValue], error) {
 	if f.listByVariantFn == nil {
-		return nil, nil
+		return service.Page[domain.VariantValue]{}, nil
 	}
 
-	return f.listByVariantFn(ctx, variantID)
+	return f.listByVariantFn(ctx, variantID, page)
 }
 
 func (f *fakeVariantValueService) Update(

@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/domain"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/pagination"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository"
 	"github.com/google/uuid"
 )
@@ -15,6 +16,18 @@ const (
 	maxProductNameLength = 200
 	maxProductCodeLength = 50
 )
+
+type ListProductsInput struct {
+	Page       PageInput
+	CategoryID *uuid.UUID
+	BrandID    *uuid.UUID
+	IsActive   *bool
+}
+
+type productCursor struct {
+	Name string    `json:"name"`
+	ID   uuid.UUID `json:"id"`
+}
 
 type CreateProductInput struct {
 	CategoryID  uuid.UUID
@@ -53,7 +66,7 @@ func (s *ProductService) Create(
 		return domain.Product{}, err
 	}
 
-	id, err := uuid.NewRandom()
+	id, err := uuid.NewV7()
 	if err != nil {
 		return domain.Product{}, fmt.Errorf(
 			"generate product id: %w",
@@ -124,16 +137,88 @@ func (s *ProductService) GetByCode(
 
 func (s *ProductService) List(
 	ctx context.Context,
-) ([]domain.Product, error) {
-	products, err := s.repository.List(ctx)
+	input ListProductsInput,
+) (Page[domain.Product], error) {
+	page, err := normalizePageInput(input.Page)
 	if err != nil {
-		return nil, mapRepositoryError(
-			"list products",
-			err,
+		return Page[domain.Product]{}, fmt.Errorf(
+			"invalid pagination: %w",
+			ErrInvalidArgument,
 		)
 	}
 
-	return products, nil
+	var cursor productCursor
+
+	if page.Cursor != "" {
+		if err := pagination.Decode(
+			page.Cursor,
+			&cursor,
+		); err != nil {
+			return Page[domain.Product]{}, fmt.Errorf(
+				"invalid cursor: %w",
+				ErrInvalidArgument,
+			)
+		}
+	}
+
+	var cursorName *string
+	var cursorID *uuid.UUID
+
+	if page.Cursor != "" {
+		cursorName = &cursor.Name
+		cursorID = &cursor.ID
+	}
+
+	products, err := s.repository.List(
+		ctx,
+		repository.ListProductsParams{
+			CursorName: cursorName,
+			CursorID:   cursorID,
+			CategoryID: input.CategoryID,
+			BrandID:    input.BrandID,
+			IsActive:   input.IsActive,
+			PageSize:   int32(page.Limit + 1),
+		},
+	)
+	if err != nil {
+		return Page[domain.Product]{},
+			mapRepositoryError(
+				"list products",
+				err,
+			)
+	}
+
+	products, hasMore := trimPage(
+		products,
+		page.Limit,
+	)
+
+	var nextCursor *string
+
+	if hasMore && len(products) > 0 {
+		last := products[len(products)-1]
+
+		encoded, err := pagination.Encode(
+			productCursor{
+				Name: last.Name,
+				ID:   last.ID,
+			},
+		)
+		if err != nil {
+			return Page[domain.Product]{},
+				fmt.Errorf(
+					"encode product cursor: %w",
+					err,
+				)
+		}
+
+		nextCursor = &encoded
+	}
+
+	return Page[domain.Product]{
+		Items:      products,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (s *ProductService) Update(

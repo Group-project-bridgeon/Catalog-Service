@@ -15,7 +15,7 @@ type fakeProductRepository struct {
 	createFn    func(context.Context, repository.CreateProductParams) (domain.Product, error)
 	getByIDFn   func(context.Context, uuid.UUID) (domain.Product, error)
 	getByCodeFn func(context.Context, string) (domain.Product, error)
-	listFn      func(context.Context) ([]domain.Product, error)
+	listFn      func(context.Context, repository.ListProductsParams) ([]domain.Product, error)
 	updateFn    func(context.Context, repository.UpdateProductParams) (domain.Product, error)
 	setActiveFn func(context.Context, uuid.UUID, bool) (domain.Product, error)
 }
@@ -55,12 +55,13 @@ func (f *fakeProductRepository) GetByCode(
 
 func (f *fakeProductRepository) List(
 	ctx context.Context,
+	params repository.ListProductsParams,
 ) ([]domain.Product, error) {
 	if f.listFn == nil {
 		return nil, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, params)
 }
 
 func (f *fakeProductRepository) Update(
@@ -361,29 +362,77 @@ func TestProductServiceGetByCode(t *testing.T) {
 }
 
 func TestProductServiceList(t *testing.T) {
+	categoryID := uuid.New()
+	brandID := uuid.New()
+	isActive := true
+
 	repo := &fakeProductRepository{
 		listFn: func(
-			context.Context,
+			_ context.Context,
+			params repository.ListProductsParams,
 		) ([]domain.Product, error) {
+			if params.PageSize != 3 { // limit (2) + 1
+				t.Fatalf("expected PageSize 3, got %d", params.PageSize)
+			}
+			if params.CategoryID == nil || *params.CategoryID != categoryID {
+				t.Fatalf("expected CategoryID %v", categoryID)
+			}
+			if params.BrandID == nil || *params.BrandID != brandID {
+				t.Fatalf("expected BrandID %v", brandID)
+			}
+			if params.IsActive == nil || *params.IsActive != isActive {
+				t.Fatalf("expected IsActive %v", isActive)
+			}
+
 			return []domain.Product{
-				{ID: uuid.New()},
-				{ID: uuid.New()},
+				{ID: uuid.New(), Name: "Product A"},
+				{ID: uuid.New(), Name: "Product B"},
+				{ID: uuid.New(), Name: "Product C"}, // Extra item -> hasMore = true
 			}, nil
 		},
 	}
 
 	s := NewProductService(repo)
 
-	products, err := s.List(context.Background())
+	page, err := s.List(context.Background(), ListProductsInput{
+		Page: PageInput{
+			Limit: 2,
+		},
+		CategoryID: &categoryID,
+		BrandID:    &brandID,
+		IsActive:   &isActive,
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(products) != 2 {
-		t.Fatalf(
-			"expected 2 products, got %d",
-			len(products),
-		)
+	if len(page.Items) != 2 {
+		t.Fatalf("expected 2 products after trim, got %d", len(page.Items))
+	}
+
+	if page.NextCursor == nil || *page.NextCursor == "" {
+		t.Fatal("expected next cursor to be generated")
+	}
+
+	// Test invalid cursor
+	_, err = s.List(context.Background(), ListProductsInput{
+		Page: PageInput{
+			Limit:  2,
+			Cursor: "invalid-base64",
+		},
+	})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument for invalid cursor, got %v", err)
+	}
+
+	// Test limit validation (0 -> default limit 50, >100 -> error)
+	_, err = s.List(context.Background(), ListProductsInput{
+		Page: PageInput{
+			Limit: 101,
+		},
+	})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Fatalf("expected ErrInvalidArgument for limit > 100, got %v", err)
 	}
 }
 

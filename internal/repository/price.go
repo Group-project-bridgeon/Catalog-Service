@@ -19,6 +19,14 @@ type UpdatePriceParams struct {
 	UnitPrice string
 }
 
+type ListPricesParams struct {
+	CursorPriceListID *uuid.UUID
+	CursorVariantID   *uuid.UUID
+	PriceListID       *uuid.UUID
+	VariantID         *uuid.UUID
+	PageSize          int32
+}
+
 type PriceRepository interface {
 	Create(
 		context.Context,
@@ -38,16 +46,7 @@ type PriceRepository interface {
 
 	List(
 		context.Context,
-	) ([]domain.Price, error)
-
-	ListByPriceListID(
-		context.Context,
-		uuid.UUID,
-	) ([]domain.Price, error)
-
-	ListByVariantID(
-		context.Context,
-		uuid.UUID,
+		ListPricesParams,
 	) ([]domain.Price, error)
 
 	Update(

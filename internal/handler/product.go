@@ -25,7 +25,8 @@ type productService interface {
 
 	List(
 		context.Context,
-	) ([]domain.Product, error)
+		service.ListProductsInput,
+	) (service.Page[domain.Product], error)
 
 	Update(
 		context.Context,
@@ -85,6 +86,11 @@ type productResponse struct {
 	IsActive    bool       `json:"is_active"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+type productPageResponse struct {
+	Items      []productResponse `json:"items"`
+	NextCursor *string           `json:"next_cursor"`
 }
 
 func (h *ProductHandler) Create(c *gin.Context) {
@@ -154,9 +160,50 @@ func (h *ProductHandler) GetByID(c *gin.Context) {
 	)
 }
 
-func (h *ProductHandler) List(c *gin.Context) {
-	products, err := h.service.List(
+func (h *ProductHandler) List(
+	c *gin.Context,
+) {
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	categoryID, err := parseOptionalUUIDQuery(
+		c,
+		"category_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	brandID, err := parseOptionalUUIDQuery(
+		c,
+		"brand_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	isActive, err := parseOptionalBoolQuery(
+		c,
+		"is_active",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.List(
 		c.Request.Context(),
+		service.ListProductsInput{
+			Page:       pageInput,
+			CategoryID: categoryID,
+			BrandID:    brandID,
+			IsActive:   isActive,
+		},
 	)
 	if err != nil {
 		writeServiceError(
@@ -168,22 +215,25 @@ func (h *ProductHandler) List(c *gin.Context) {
 		return
 	}
 
-	response := make(
+	items := make(
 		[]productResponse,
 		0,
-		len(products),
+		len(page.Items),
 	)
 
-	for _, product := range products {
-		response = append(
-			response,
+	for _, product := range page.Items {
+		items = append(
+			items,
 			toProductResponse(product),
 		)
 	}
 
 	c.JSON(
 		http.StatusOK,
-		response,
+		productPageResponse{
+			Items:      items,
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 

@@ -74,7 +74,7 @@ type CatalogProductImage struct {
 	ProductID pgtype.UUID
 	VariantID pgtype.UUID
 	ImageUrl  string
-	SortOrder pgtype.Int4
+	SortOrder int32
 	CreatedAt pgtype.Timestamptz
 }
 

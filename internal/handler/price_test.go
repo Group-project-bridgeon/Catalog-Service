@@ -27,17 +27,20 @@ type fakePriceService struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.Price, error)
+		service.ListPricesInput,
+	) (service.Page[domain.Price], error)
 
 	listByPriceListFn func(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.Price, error)
+		service.PageInput,
+	) (service.Page[domain.Price], error)
 
 	listByVariantFn func(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.Price, error)
+		service.PageInput,
+	) (service.Page[domain.Price], error)
 
 	updateFn func(
 		context.Context,
@@ -70,34 +73,37 @@ func (f *fakePriceService) GetByID(
 
 func (f *fakePriceService) List(
 	ctx context.Context,
-) ([]domain.Price, error) {
+	input service.ListPricesInput,
+) (service.Page[domain.Price], error) {
 	if f.listFn == nil {
-		return nil, nil
+		return service.Page[domain.Price]{}, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, input)
 }
 
 func (f *fakePriceService) ListByPriceListID(
 	ctx context.Context,
 	id uuid.UUID,
-) ([]domain.Price, error) {
+	page service.PageInput,
+) (service.Page[domain.Price], error) {
 	if f.listByPriceListFn == nil {
-		return nil, nil
+		return service.Page[domain.Price]{}, nil
 	}
 
-	return f.listByPriceListFn(ctx, id)
+	return f.listByPriceListFn(ctx, id, page)
 }
 
 func (f *fakePriceService) ListByVariantID(
 	ctx context.Context,
 	id uuid.UUID,
-) ([]domain.Price, error) {
+	page service.PageInput,
+) (service.Page[domain.Price], error) {
 	if f.listByVariantFn == nil {
-		return nil, nil
+		return service.Page[domain.Price]{}, nil
 	}
 
-	return f.listByVariantFn(ctx, id)
+	return f.listByVariantFn(ctx, id, page)
 }
 
 func (f *fakePriceService) Update(

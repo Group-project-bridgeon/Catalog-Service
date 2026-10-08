@@ -27,17 +27,20 @@ type fakeProductImageService struct {
 
 	listFn func(
 		context.Context,
-	) ([]domain.ProductImage, error)
+		service.ListProductImagesInput,
+	) (service.Page[domain.ProductImage], error)
 
 	listByProductIDFn func(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.ProductImage, error)
+		service.PageInput,
+	) (service.Page[domain.ProductImage], error)
 
 	listByVariantIDFn func(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.ProductImage, error)
+		service.PageInput,
+	) (service.Page[domain.ProductImage], error)
 
 	updateFn func(
 		context.Context,
@@ -70,34 +73,37 @@ func (f *fakeProductImageService) GetByID(
 
 func (f *fakeProductImageService) List(
 	ctx context.Context,
-) ([]domain.ProductImage, error) {
+	input service.ListProductImagesInput,
+) (service.Page[domain.ProductImage], error) {
 	if f.listFn == nil {
-		return nil, nil
+		return service.Page[domain.ProductImage]{}, nil
 	}
 
-	return f.listFn(ctx)
+	return f.listFn(ctx, input)
 }
 
 func (f *fakeProductImageService) ListByProductID(
 	ctx context.Context,
 	id uuid.UUID,
-) ([]domain.ProductImage, error) {
+	page service.PageInput,
+) (service.Page[domain.ProductImage], error) {
 	if f.listByProductIDFn == nil {
-		return nil, nil
+		return service.Page[domain.ProductImage]{}, nil
 	}
 
-	return f.listByProductIDFn(ctx, id)
+	return f.listByProductIDFn(ctx, id, page)
 }
 
 func (f *fakeProductImageService) ListByVariantID(
 	ctx context.Context,
 	id uuid.UUID,
-) ([]domain.ProductImage, error) {
+	page service.PageInput,
+) (service.Page[domain.ProductImage], error) {
 	if f.listByVariantIDFn == nil {
-		return nil, nil
+		return service.Page[domain.ProductImage]{}, nil
 	}
 
-	return f.listByVariantIDFn(ctx, id)
+	return f.listByVariantIDFn(ctx, id, page)
 }
 
 func (f *fakeProductImageService) Update(

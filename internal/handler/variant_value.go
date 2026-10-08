@@ -25,12 +25,14 @@ type variantValueService interface {
 
 	List(
 		context.Context,
-	) ([]domain.VariantValue, error)
+		service.ListVariantValuesInput,
+	) (service.Page[domain.VariantValue], error)
 
 	ListByVariantID(
 		context.Context,
 		uuid.UUID,
-	) ([]domain.VariantValue, error)
+		service.PageInput,
+	) (service.Page[domain.VariantValue], error)
 
 	Update(
 		context.Context,
@@ -69,6 +71,11 @@ type variantValueResponse struct {
 	VariantID        uuid.UUID `json:"variant_id"`
 	AttributeID      uuid.UUID `json:"attribute_id"`
 	AttributeValueID uuid.UUID `json:"attribute_value_id"`
+}
+
+type variantValuePageResponse struct {
+	Items      []variantValueResponse `json:"items"`
+	NextCursor *string                `json:"next_cursor"`
 }
 
 func (h *VariantValueHandler) Create(
@@ -143,8 +150,27 @@ func (h *VariantValueHandler) Get(
 func (h *VariantValueHandler) List(
 	c *gin.Context,
 ) {
-	values, err := h.service.List(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	variantID, err := parseOptionalUUIDQuery(
+		c,
+		"variant_id",
+	)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.List(
 		c.Request.Context(),
+		service.ListVariantValuesInput{
+			Page:      pageInput,
+			VariantID: variantID,
+		},
 	)
 	if err != nil {
 		writeServiceError(
@@ -158,7 +184,10 @@ func (h *VariantValueHandler) List(
 
 	c.JSON(
 		http.StatusOK,
-		toVariantValueResponses(values),
+		variantValuePageResponse{
+			Items:      toVariantValueResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 
@@ -176,9 +205,16 @@ func (h *VariantValueHandler) ListByVariantID(
 		return
 	}
 
-	values, err := h.service.ListByVariantID(
+	pageInput, err := parsePageInput(c)
+	if err != nil {
+		writeInvalidQuery(c, err)
+		return
+	}
+
+	page, err := h.service.ListByVariantID(
 		c.Request.Context(),
 		variantID,
+		pageInput,
 	)
 	if err != nil {
 		writeServiceError(
@@ -192,7 +228,10 @@ func (h *VariantValueHandler) ListByVariantID(
 
 	c.JSON(
 		http.StatusOK,
-		toVariantValueResponses(values),
+		variantValuePageResponse{
+			Items:      toVariantValueResponses(page.Items),
+			NextCursor: page.NextCursor,
+		},
 	)
 }
 

@@ -3,6 +3,7 @@ package router
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/middleware"
 	"github.com/gin-gonic/gin"
@@ -16,11 +17,19 @@ type DatabaseHealthChecker interface {
 func New(
 	db DatabaseHealthChecker,
 	log zerolog.Logger,
+	maxBodyBytes int64,
+	slowRequestThreshold time.Duration,
 ) *gin.Engine {
 	r := gin.New()
 
-	r.Use(middleware.RequestLogger(log))
+	r.Use(
+		middleware.RequestLogger(
+			log,
+			slowRequestThreshold,
+		),
+	)
 	r.Use(middleware.Recovery(log))
+	r.Use(middleware.MaxBodyBytes(maxBodyBytes))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(

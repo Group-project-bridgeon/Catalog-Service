@@ -109,11 +109,58 @@ func (q *Queries) GetProductVariantByProductAndSKU(ctx context.Context, arg GetP
 const listProductVariants = `-- name: ListProductVariants :many
 SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
 FROM catalog_product_variants
-ORDER BY product_id, sku
+WHERE
+    (
+        $1::uuid IS NULL
+        OR (
+            product_id,
+            sku,
+            id
+        ) > (
+            $1::uuid,
+            $2::text,
+            $3::uuid
+        )
+    )
+    AND (
+        $4::uuid IS NULL
+        OR product_id = $4::uuid
+    )
+    AND (
+        $5::uuid IS NULL
+        OR unit_id = $5::uuid
+    )
+    AND (
+        $6::boolean IS NULL
+        OR is_active = $6::boolean
+    )
+ORDER BY
+    product_id,
+    sku,
+    id
+LIMIT $7::int
 `
 
-func (q *Queries) ListProductVariants(ctx context.Context) ([]CatalogProductVariant, error) {
-	rows, err := q.db.Query(ctx, listProductVariants)
+type ListProductVariantsParams struct {
+	CursorProductID pgtype.UUID
+	CursorSku       pgtype.Text
+	CursorID        pgtype.UUID
+	ProductID       pgtype.UUID
+	UnitID          pgtype.UUID
+	IsActive        pgtype.Bool
+	PageSize        int32
+}
+
+func (q *Queries) ListProductVariants(ctx context.Context, arg ListProductVariantsParams) ([]CatalogProductVariant, error) {
+	rows, err := q.db.Query(ctx, listProductVariants,
+		arg.CursorProductID,
+		arg.CursorSku,
+		arg.CursorID,
+		arg.ProductID,
+		arg.UnitID,
+		arg.IsActive,
+		arg.PageSize,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -141,15 +188,18 @@ func (q *Queries) ListProductVariants(ctx context.Context) ([]CatalogProductVari
 	return items, nil
 }
 
-const listProductVariantsByProductID = `-- name: ListProductVariantsByProductID :many
+const listProductVariantsByIDs = `-- name: ListProductVariantsByIDs :many
 SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
 FROM catalog_product_variants
-WHERE product_id = $1
-ORDER BY sku
+WHERE id = ANY($1::uuid[])
+ORDER BY
+    product_id,
+    sku,
+    id
 `
 
-func (q *Queries) ListProductVariantsByProductID(ctx context.Context, productID pgtype.UUID) ([]CatalogProductVariant, error) {
-	rows, err := q.db.Query(ctx, listProductVariantsByProductID, productID)
+func (q *Queries) ListProductVariantsByIDs(ctx context.Context, ids []pgtype.UUID) ([]CatalogProductVariant, error) {
+	rows, err := q.db.Query(ctx, listProductVariantsByIDs, ids)
 	if err != nil {
 		return nil, err
 	}
