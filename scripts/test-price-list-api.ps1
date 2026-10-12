@@ -1,4 +1,14 @@
-$baseUrl = "http://localhost:8081/api/v1/catalog/price-lists"
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$baseUrl = "$CatalogBaseUrl/price-lists"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

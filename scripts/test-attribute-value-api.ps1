@@ -1,5 +1,15 @@
-$attributeBaseUrl = "http://localhost:8081/api/v1/catalog/attributes"
-$valueBaseUrl = "http://localhost:8081/api/v1/catalog/attribute-values"
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$attributeBaseUrl = "$CatalogBaseUrl/attributes"
+$valueBaseUrl = "$CatalogBaseUrl/attribute-values"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

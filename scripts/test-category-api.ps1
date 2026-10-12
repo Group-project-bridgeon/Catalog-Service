@@ -1,6 +1,17 @@
 
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
 # Integration test script
-$baseUrl = "http://localhost:8081/api/v1/catalog/categories"
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$baseUrl = "$CatalogBaseUrl/categories"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
 $code = "CAT-INT-$unique"

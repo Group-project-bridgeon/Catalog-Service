@@ -1,8 +1,17 @@
-$categoryBaseUrl = "http://localhost:8081/api/v1/catalog/categories"
-$productBaseUrl = "http://localhost:8081/api/v1/catalog/products"
-$unitBaseUrl = "http://localhost:8081/api/v1/catalog/units"
-$variantBaseUrl = "http://localhost:8081/api/v1/catalog/product-variants"
-$imageBaseUrl = "http://localhost:8081/api/v1/catalog/product-images"
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
+$ErrorActionPreference = "Stop"
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$categoryBaseUrl = "$CatalogBaseUrl/categories"
+$productBaseUrl = "$CatalogBaseUrl/products"
+$unitBaseUrl = "$CatalogBaseUrl/units"
+$variantBaseUrl = "$CatalogBaseUrl/product-variants"
+$imageBaseUrl = "$CatalogBaseUrl/product-images"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

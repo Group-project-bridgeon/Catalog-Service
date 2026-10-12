@@ -1,10 +1,17 @@
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$categoryBaseUrl = "http://localhost:8081/api/v1/catalog/categories"
-$unitBaseUrl = "http://localhost:8081/api/v1/catalog/units"
-$productBaseUrl = "http://localhost:8081/api/v1/catalog/products"
-$variantBaseUrl = "http://localhost:8081/api/v1/catalog/product-variants"
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$categoryBaseUrl = "$CatalogBaseUrl/categories"
+$unitBaseUrl = "$CatalogBaseUrl/units"
+$productBaseUrl = "$CatalogBaseUrl/products"
+$variantBaseUrl = "$CatalogBaseUrl/product-variants"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

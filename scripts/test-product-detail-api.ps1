@@ -1,16 +1,23 @@
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$categoryBaseUrl = "http://localhost:8081/api/v1/catalog/categories"
-$unitBaseUrl = "http://localhost:8081/api/v1/catalog/units"
-$productBaseUrl = "http://localhost:8081/api/v1/catalog/products"
-$variantBaseUrl = "http://localhost:8081/api/v1/catalog/product-variants"
-$attributeBaseUrl = "http://localhost:8081/api/v1/catalog/attributes"
-$attributeValueBaseUrl = "http://localhost:8081/api/v1/catalog/attribute-values"
-$variantValueBaseUrl = "http://localhost:8081/api/v1/catalog/variant-values"
-$imageBaseUrl = "http://localhost:8081/api/v1/catalog/product-images"
-$priceListBaseUrl = "http://localhost:8081/api/v1/catalog/price-lists"
-$priceBaseUrl = "http://localhost:8081/api/v1/catalog/prices"
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$categoryBaseUrl = "$CatalogBaseUrl/categories"
+$unitBaseUrl = "$CatalogBaseUrl/units"
+$productBaseUrl = "$CatalogBaseUrl/products"
+$variantBaseUrl = "$CatalogBaseUrl/product-variants"
+$attributeBaseUrl = "$CatalogBaseUrl/attributes"
+$attributeValueBaseUrl = "$CatalogBaseUrl/attribute-values"
+$variantValueBaseUrl = "$CatalogBaseUrl/variant-values"
+$imageBaseUrl = "$CatalogBaseUrl/product-images"
+$priceListBaseUrl = "$CatalogBaseUrl/price-lists"
+$priceBaseUrl = "$CatalogBaseUrl/prices"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 

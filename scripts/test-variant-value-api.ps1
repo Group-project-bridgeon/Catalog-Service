@@ -1,10 +1,20 @@
-$categoryBaseUrl = "http://localhost:8081/api/v1/catalog/categories"
-$productBaseUrl = "http://localhost:8081/api/v1/catalog/products"
-$unitBaseUrl = "http://localhost:8081/api/v1/catalog/units"
-$variantBaseUrl = "http://localhost:8081/api/v1/catalog/product-variants"
-$attributeBaseUrl = "http://localhost:8081/api/v1/catalog/attributes"
-$attributeValueBaseUrl = "http://localhost:8081/api/v1/catalog/attribute-values"
-$variantValueBaseUrl = "http://localhost:8081/api/v1/catalog/variant-values"
+param(
+    [string]$BaseUrl = "http://localhost:8081"
+)
+
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$CatalogBaseUrl = "$BaseUrl/api/v1/catalog"
+
+$categoryBaseUrl = "$CatalogBaseUrl/categories"
+$productBaseUrl = "$CatalogBaseUrl/products"
+$unitBaseUrl = "$CatalogBaseUrl/units"
+$variantBaseUrl = "$CatalogBaseUrl/product-variants"
+$attributeBaseUrl = "$CatalogBaseUrl/attributes"
+$attributeValueBaseUrl = "$CatalogBaseUrl/attribute-values"
+$variantValueBaseUrl = "$CatalogBaseUrl/variant-values"
 
 $unique = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
