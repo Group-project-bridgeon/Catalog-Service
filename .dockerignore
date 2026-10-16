@@ -22,3 +22,5 @@ README.md
 scripts
 db
 sqlc.yaml
+/keys/
+*.pem

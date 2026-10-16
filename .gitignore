@@ -1,3 +1,5 @@
 .env
 bin/
 *.exe
+/keys/
+*.pem

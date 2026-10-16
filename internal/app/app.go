@@ -17,6 +17,7 @@ import (
 	postgresrepo "github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/repository/postgres/catalogdb"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/router"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/security"
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -46,6 +47,11 @@ func Run(log zerolog.Logger) error {
 			"load config: %w",
 			err,
 		)
+	}
+
+	verifier, err := security.Load(cfg.JWTPublicKeyPath, cfg.JWTIssuer, cfg.JWTAudience)
+	if err != nil {
+		return fmt.Errorf("load JWT verifier: %w", err)
 	}
 
 	ctx, stop := signal.NotifyContext(
@@ -252,6 +258,7 @@ func Run(log zerolog.Logger) error {
 		log,
 		cfg.HTTP.MaxRequestBodyBytes,
 		cfg.HTTP.SlowRequestThreshold,
+		verifier,
 	)
 
 	router.RegisterCategoryRoutes(
