@@ -29,6 +29,7 @@ func TestHealth(t *testing.T) {
 		log,
 		1<<20,
 		500*time.Millisecond,
+		nil,
 	)
 
 	req := httptest.NewRequest(
@@ -58,6 +59,7 @@ func TestReadyWhenDatabaseAvailable(t *testing.T) {
 		log,
 		1<<20,
 		500*time.Millisecond,
+		nil,
 	)
 
 	req := httptest.NewRequest(
@@ -89,6 +91,7 @@ func TestReadyWhenDatabaseUnavailable(t *testing.T) {
 		log,
 		1<<20,
 		500*time.Millisecond,
+		nil,
 	)
 
 	req := httptest.NewRequest(

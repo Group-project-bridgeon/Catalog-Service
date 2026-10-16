@@ -1,5 +1,10 @@
 # Catalog Service
 
+All business endpoints require an RS256 bearer token and exact GLOBAL permissions.
+See [security configuration and the 58-endpoint permission matrix](docs/security.md).
+Only GET /health and GET /ready are public. Direct host port 8081 is opt-in in ERP-Platform.
+
+
 Catalog Service is the catalog-management microservice for the Fashion Wholesale ERP.
 
 It owns catalog-related data such as categories, brands, units, products, product variants, attributes, variant attributes, product images, price lists, and prices.

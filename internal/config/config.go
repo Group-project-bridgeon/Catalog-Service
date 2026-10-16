@@ -41,12 +41,15 @@ type CacheConfig struct {
 }
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	GinMode     string
-	Database    DatabaseConfig
-	HTTP        HTTPConfig
-	Cache       CacheConfig
+	JWTPublicKeyPath string
+	JWTIssuer        string
+	JWTAudience      string
+	Port             string
+	DatabaseURL      string
+	GinMode          string
+	Database         DatabaseConfig
+	HTTP             HTTPConfig
+	Cache            CacheConfig
 }
 
 func Load() (*Config, error) {
@@ -158,9 +161,12 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		Port:        port,
-		DatabaseURL: databaseURL,
-		GinMode:     ginMode,
+		JWTPublicKeyPath: os.Getenv("JWT_PUBLIC_KEY_PATH"),
+		JWTIssuer:        os.Getenv("JWT_ISSUER"),
+		JWTAudience:      os.Getenv("JWT_AUDIENCE"),
+		Port:             port,
+		DatabaseURL:      databaseURL,
+		GinMode:          ginMode,
 
 		Database: DatabaseConfig{
 			MaxConns:          int32(dbMaxConns),

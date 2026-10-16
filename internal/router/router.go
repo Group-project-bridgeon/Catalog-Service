@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Group-project-bridgeon/Catalog-Service/internal/middleware"
+	"github.com/Group-project-bridgeon/Catalog-Service/internal/security"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -19,6 +20,7 @@ func New(
 	log zerolog.Logger,
 	maxBodyBytes int64,
 	slowRequestThreshold time.Duration,
+	verifier *security.Verifier,
 ) *gin.Engine {
 	r := gin.New()
 
@@ -29,6 +31,7 @@ func New(
 		),
 	)
 	r.Use(middleware.Recovery(log))
+	r.Use(security.Protect(verifier, PermissionMatrix()))
 	r.Use(middleware.MaxBodyBytes(maxBodyBytes))
 
 	r.GET("/health", func(c *gin.Context) {
