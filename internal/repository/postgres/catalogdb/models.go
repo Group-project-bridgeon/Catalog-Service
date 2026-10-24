@@ -40,6 +40,20 @@ type CatalogCategory struct {
 	UpdatedAt   pgtype.Timestamptz
 }
 
+type CatalogPackRevision struct {
+	PackID        pgtype.UUID
+	Revision      int64
+	PiecesPerPack int64
+	Label         string
+	CreatedAt     pgtype.Timestamptz
+}
+
+type CatalogPieceUnit struct {
+	UnitID       pgtype.UUID
+	QuantityKind string
+	CreatedAt    pgtype.Timestamptz
+}
+
 type CatalogPrice struct {
 	ID          pgtype.UUID
 	PriceListID pgtype.UUID
@@ -58,15 +72,16 @@ type CatalogPriceList struct {
 }
 
 type CatalogProduct struct {
-	ID          pgtype.UUID
-	CategoryID  pgtype.UUID
-	BrandID     pgtype.UUID
-	Name        string
-	ProductCode string
-	Description pgtype.Text
-	IsActive    bool
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
+	ID           pgtype.UUID
+	CategoryID   pgtype.UUID
+	BrandID      pgtype.UUID
+	Name         string
+	ProductCode  string
+	Description  pgtype.Text
+	IsActive     bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	StockVersion int64
 }
 
 type CatalogProductImage struct {
@@ -87,15 +102,33 @@ type CatalogProductVariant struct {
 	IsActive            bool
 	CreatedAt           pgtype.Timestamptz
 	UpdatedAt           pgtype.Timestamptz
+	StockVersion        int64
+}
+
+type CatalogStockEligibility struct {
+	VariantID  pgtype.UUID
+	BaseUnitID pgtype.UUID
+	CreatedAt  pgtype.Timestamptz
 }
 
 type CatalogUnit struct {
-	ID        pgtype.UUID
-	Code      string
-	Name      string
-	IsActive  bool
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
+	ID           pgtype.UUID
+	Code         string
+	Name         string
+	IsActive     bool
+	CreatedAt    pgtype.Timestamptz
+	UpdatedAt    pgtype.Timestamptz
+	StockVersion int64
+}
+
+type CatalogVariantPack struct {
+	ID              pgtype.UUID
+	VariantID       pgtype.UUID
+	Code            string
+	CurrentRevision int64
+	StockVersion    int64
+	IsActive        bool
+	CreatedAt       pgtype.Timestamptz
 }
 
 type CatalogVariantValue struct {

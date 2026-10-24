@@ -87,7 +87,7 @@ func (q *Queries) ListProductImagesForDetail(ctx context.Context, productID pgty
 }
 
 const listProductVariantsForDetail = `-- name: ListProductVariantsForDetail :many
-SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 FROM catalog_product_variants
 WHERE product_id = $1
 ORDER BY
@@ -113,6 +113,7 @@ func (q *Queries) ListProductVariantsForDetail(ctx context.Context, productID pg
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.StockVersion,
 		); err != nil {
 			return nil, err
 		}

@@ -41,15 +41,17 @@ type CacheConfig struct {
 }
 
 type Config struct {
-	JWTPublicKeyPath string
-	JWTIssuer        string
-	JWTAudience      string
-	Port             string
-	DatabaseURL      string
-	GinMode          string
-	Database         DatabaseConfig
-	HTTP             HTTPConfig
-	Cache            CacheConfig
+	StockReferencesEnabled  bool
+	TLSCertPath, TLSKeyPath string
+	JWTPublicKeyPath        string
+	JWTIssuer               string
+	JWTAudience             string
+	Port                    string
+	DatabaseURL             string
+	GinMode                 string
+	Database                DatabaseConfig
+	HTTP                    HTTPConfig
+	Cache                   CacheConfig
 }
 
 func Load() (*Config, error) {
@@ -160,7 +162,20 @@ func Load() (*Config, error) {
 		ginMode = defaultGinMode
 	}
 
+	stockEnabled := false
+	if raw := os.Getenv("CATALOG_STOCK_REFERENCES_ENABLED"); raw != "" {
+		var err error
+		stockEnabled, err = strconv.ParseBool(raw)
+		if err != nil {
+			return nil, errors.New("invalid CATALOG_STOCK_REFERENCES_ENABLED")
+		}
+	}
+	tlsCert, tlsKey := os.Getenv("TLS_CERT_PATH"), os.Getenv("TLS_KEY_PATH")
+	if (tlsCert == "") != (tlsKey == "") || (stockEnabled && tlsCert == "") {
+		return nil, errors.New("stock references require paired TLS_CERT_PATH and TLS_KEY_PATH")
+	}
 	return &Config{
+		StockReferencesEnabled: stockEnabled, TLSCertPath: tlsCert, TLSKeyPath: tlsKey,
 		JWTPublicKeyPath: os.Getenv("JWT_PUBLIC_KEY_PATH"),
 		JWTIssuer:        os.Getenv("JWT_ISSUER"),
 		JWTAudience:      os.Getenv("JWT_AUDIENCE"),

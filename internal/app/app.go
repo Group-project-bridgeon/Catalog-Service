@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -253,12 +254,25 @@ func Run(log zerolog.Logger) error {
 
 	gin.SetMode(cfg.GinMode)
 
+	var referenceTransport []router.StockReferenceTransport
+	if cfg.StockReferencesEnabled {
+		machine, err := security.LoadMachine(cfg.JWTPublicKeyPath, cfg.JWTIssuer)
+		if err != nil {
+			return err
+		}
+		refs, err := service.NewStockReferenceService(postgresrepo.NewStockReferenceRepository(db))
+		if err != nil {
+			return err
+		}
+		referenceTransport = append(referenceTransport, router.StockReferenceTransport{Verifier: machine, Resolver: refs})
+	}
 	httpHandler := router.New(
 		db,
 		log,
 		cfg.HTTP.MaxRequestBodyBytes,
 		cfg.HTTP.SlowRequestThreshold,
 		verifier,
+		referenceTransport...,
 	)
 
 	router.RegisterCategoryRoutes(
@@ -322,6 +336,7 @@ func Run(log zerolog.Logger) error {
 	)
 
 	server := &http.Server{
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 		Addr:              ":" + cfg.Port,
 		Handler:           httpHandler,
 		ReadHeaderTimeout: readHeaderTimeout,
@@ -337,7 +352,11 @@ func Run(log zerolog.Logger) error {
 			Str("port", cfg.Port).
 			Msg("catalog service starting")
 
-		serverErr <- server.ListenAndServe()
+		if cfg.TLSCertPath != "" {
+			serverErr <- server.ListenAndServeTLS(cfg.TLSCertPath, cfg.TLSKeyPath)
+		} else {
+			serverErr <- server.ListenAndServe()
+		}
 	}()
 
 	select {

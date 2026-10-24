@@ -19,7 +19,7 @@ func RequestLogger(
 		path := c.Request.URL.Path
 
 		if path == "/health" ||
-			path == "/ready" {
+			path == "/ready" || path == "/api/v1/catalog/stock-references/batch" {
 			return
 		}
 
