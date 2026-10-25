@@ -22,7 +22,7 @@ INSERT INTO catalog_products (
     is_active
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 `
 
 type CreateProductParams struct {
@@ -56,12 +56,13 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (C
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getProductByCode = `-- name: GetProductByCode :one
-SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 FROM catalog_products
 WHERE product_code = $1
 `
@@ -79,12 +80,13 @@ func (q *Queries) GetProductByCode(ctx context.Context, productCode string) (Cat
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getProductByID = `-- name: GetProductByID :one
-SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 FROM catalog_products
 WHERE id = $1
 `
@@ -102,12 +104,13 @@ func (q *Queries) GetProductByID(ctx context.Context, id pgtype.UUID) (CatalogPr
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+SELECT id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 FROM catalog_products
 WHERE
     (
@@ -173,6 +176,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]C
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.StockVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -190,7 +194,7 @@ SET
     is_active = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 `
 
 type SetProductActiveParams struct {
@@ -211,6 +215,7 @@ func (q *Queries) SetProductActive(ctx context.Context, arg SetProductActivePara
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
@@ -225,7 +230,7 @@ SET
     description = $6,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at
+RETURNING id, category_id, brand_id, name, product_code, description, is_active, created_at, updated_at, stock_version
 `
 
 type UpdateProductParams struct {
@@ -257,6 +262,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (C
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }

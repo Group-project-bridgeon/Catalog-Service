@@ -1,5 +1,13 @@
 # Catalog Service
 
+Stock Foundation slice 4a now provides internal piece eligibility, immutable
+variant/unit bindings, versioned packs and coherent reference batches. See the
+[Catalog stock-reference contract and roadmap](docs/stock-reference-spec.md).
+Legacy variants remain ineligible until explicitly classified. No stock-reference
+or management HTTP route is registered; machine authentication, secure transport
+and approved freshness enforcement remain later integration work. Migration 000003
+was verified only in disposable PostgreSQL, not applied to normal databases.
+
 All business endpoints require an RS256 bearer token and exact GLOBAL permissions.
 See [security configuration and the 58-endpoint permission matrix](docs/security.md).
 Only GET /health and GET /ready are public. Direct host port 8081 is opt-in in ERP-Platform.

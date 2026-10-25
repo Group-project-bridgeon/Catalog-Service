@@ -21,7 +21,7 @@ INSERT INTO catalog_product_variants (
     is_active
 )
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 `
 
 type CreateProductVariantParams struct {
@@ -52,12 +52,13 @@ func (q *Queries) CreateProductVariant(ctx context.Context, arg CreateProductVar
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getProductVariantByID = `-- name: GetProductVariantByID :one
-SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 FROM catalog_product_variants
 WHERE id = $1
 `
@@ -74,12 +75,13 @@ func (q *Queries) GetProductVariantByID(ctx context.Context, id pgtype.UUID) (Ca
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getProductVariantByProductAndSKU = `-- name: GetProductVariantByProductAndSKU :one
-SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 FROM catalog_product_variants
 WHERE product_id = $1
   AND sku = $2
@@ -102,12 +104,13 @@ func (q *Queries) GetProductVariantByProductAndSKU(ctx context.Context, arg GetP
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const listProductVariants = `-- name: ListProductVariants :many
-SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 FROM catalog_product_variants
 WHERE
     (
@@ -177,6 +180,7 @@ func (q *Queries) ListProductVariants(ctx context.Context, arg ListProductVarian
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.StockVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -189,7 +193,7 @@ func (q *Queries) ListProductVariants(ctx context.Context, arg ListProductVarian
 }
 
 const listProductVariantsByIDs = `-- name: ListProductVariantsByIDs :many
-SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+SELECT id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 FROM catalog_product_variants
 WHERE id = ANY($1::uuid[])
 ORDER BY
@@ -216,6 +220,7 @@ func (q *Queries) ListProductVariantsByIDs(ctx context.Context, ids []pgtype.UUI
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.StockVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -233,7 +238,7 @@ SET
     is_active = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 `
 
 type SetProductVariantActiveParams struct {
@@ -253,6 +258,7 @@ func (q *Queries) SetProductVariantActive(ctx context.Context, arg SetProductVar
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
@@ -264,7 +270,7 @@ SET
     default_selling_price = $3,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at
+RETURNING id, product_id, sku, default_selling_price, unit_id, is_active, created_at, updated_at, stock_version
 `
 
 type UpdateProductVariantParams struct {
@@ -285,6 +291,7 @@ func (q *Queries) UpdateProductVariant(ctx context.Context, arg UpdateProductVar
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }

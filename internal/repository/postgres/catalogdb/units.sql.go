@@ -19,7 +19,7 @@ INSERT INTO catalog_units (
     is_active
 )
 VALUES ($1, $2, $3, $4)
-RETURNING id, code, name, is_active, created_at, updated_at
+RETURNING id, code, name, is_active, created_at, updated_at, stock_version
 `
 
 type CreateUnitParams struct {
@@ -44,12 +44,13 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) (Catalog
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getUnitByCode = `-- name: GetUnitByCode :one
-SELECT id, code, name, is_active, created_at, updated_at
+SELECT id, code, name, is_active, created_at, updated_at, stock_version
 FROM catalog_units
 WHERE code = $1
 `
@@ -64,12 +65,13 @@ func (q *Queries) GetUnitByCode(ctx context.Context, code string) (CatalogUnit, 
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getUnitByID = `-- name: GetUnitByID :one
-SELECT id, code, name, is_active, created_at, updated_at
+SELECT id, code, name, is_active, created_at, updated_at, stock_version
 FROM catalog_units
 WHERE id = $1
 `
@@ -84,12 +86,13 @@ func (q *Queries) GetUnitByID(ctx context.Context, id pgtype.UUID) (CatalogUnit,
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const getUnitByName = `-- name: GetUnitByName :one
-SELECT id, code, name, is_active, created_at, updated_at
+SELECT id, code, name, is_active, created_at, updated_at, stock_version
 FROM catalog_units
 WHERE name = $1
 `
@@ -104,12 +107,13 @@ func (q *Queries) GetUnitByName(ctx context.Context, name string) (CatalogUnit, 
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
 
 const listUnits = `-- name: ListUnits :many
-SELECT id, code, name, is_active, created_at, updated_at
+SELECT id, code, name, is_active, created_at, updated_at, stock_version
 FROM catalog_units
 ORDER BY name
 `
@@ -130,6 +134,7 @@ func (q *Queries) ListUnits(ctx context.Context) ([]CatalogUnit, error) {
 			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.StockVersion,
 		); err != nil {
 			return nil, err
 		}
@@ -147,7 +152,7 @@ SET
     is_active = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, code, name, is_active, created_at, updated_at
+RETURNING id, code, name, is_active, created_at, updated_at, stock_version
 `
 
 type SetUnitActiveParams struct {
@@ -165,6 +170,7 @@ func (q *Queries) SetUnitActive(ctx context.Context, arg SetUnitActiveParams) (C
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
@@ -176,7 +182,7 @@ SET
     name = $3,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, code, name, is_active, created_at, updated_at
+RETURNING id, code, name, is_active, created_at, updated_at, stock_version
 `
 
 type UpdateUnitParams struct {
@@ -195,6 +201,7 @@ func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (Catalog
 		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.StockVersion,
 	)
 	return i, err
 }
