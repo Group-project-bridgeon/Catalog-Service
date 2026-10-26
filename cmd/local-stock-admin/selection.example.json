@@ -1,0 +1,5 @@
+{
+  "unit_id": "<confirmed-unit-uuid>",
+  "variant_ids": ["<explicitly-selected-variant-uuid>"],
+  "confirmation": "one base unit is one physical piece for every variant using this unit"
+}
